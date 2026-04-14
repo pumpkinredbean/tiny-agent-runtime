@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>tiny-agent-runtime</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      body { margin: 0; background: #0b1020; color: #e5e7eb; }
+      main { max-width: 900px; margin: 0 auto; padding: 24px; }
+      form, pre { background: #111827; border: 1px solid #374151; border-radius: 12px; }
+      form { padding: 16px; display: grid; gap: 12px; }
+      .row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+      label { display: grid; gap: 6px; font-size: 14px; }
+      input, select, textarea, button { font: inherit; border-radius: 8px; border: 1px solid #4b5563; background: #030712; color: inherit; padding: 10px 12px; }
+      textarea { min-height: 110px; resize: vertical; }
+      button { cursor: pointer; background: #2563eb; border-color: #2563eb; font-weight: 600; }
+      pre { margin-top: 16px; padding: 16px; min-height: 180px; white-space: pre-wrap; }
+      .muted { color: #9ca3af; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>tiny-agent-runtime</h1>
+      <p class="muted">Direct prompt mode over the local runtime auth store.</p>
+      <form id="prompt-form">
+        <div class="row">
+          <label>
+            Provider
+            <select name="provider">
+              <option value="codex">codex</option>
+              <option value="copilot">copilot</option>
+            </select>
+          </label>
+          <label>
+            Model (optional)
+            <input name="model" placeholder="Use server default" />
+          </label>
+        </div>
+        <label>
+          System (optional)
+          <textarea name="system" placeholder="You are a helpful assistant."></textarea>
+        </label>
+        <label>
+          Prompt
+          <textarea name="prompt" required placeholder="Ask something..."></textarea>
+        </label>
+        <button type="submit">Run prompt</button>
+      </form>
+      <pre id="output">Ready.</pre>
+    </main>
+    <script type="module">
+      const form = document.getElementById("prompt-form");
+      const output = document.getElementById("output");
+
+      function append(text) {
+        output.textContent += text;
+      }
+
+      function parseEvent(block) {
+        const event = { event: "message", data: "" };
+        for (const line of block.split("\n")) {
+          if (line.startsWith("event:")) event.event = line.slice(6).trim();
+          if (line.startsWith("data:")) event.data += `${line.slice(5).trimStart()}\n`;
+        }
+        event.data = event.data.replace(/\n$/, "");
+        return event;
+      }
+
+      form.addEventListener("submit", async (node) => {
+        node.preventDefault();
+        output.textContent = "";
+
+        const data = new FormData(form);
+        const res = await fetch("/api/prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: data.get("provider"),
+            model: data.get("model"),
+            system: data.get("system"),
+            prompt: data.get("prompt"),
+          }),
+        });
+
+        if (!res.ok || !res.body) {
+          output.textContent = await res.text();
+          return;
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let split = buffer.indexOf("\n\n");
+          while (split >= 0) {
+            const block = buffer.slice(0, split).trim();
+            buffer = buffer.slice(split + 2);
+            if (block) {
+              const evt = parseEvent(block);
+              if (evt.event === "part") {
+                const part = JSON.parse(evt.data);
+                if (part.type === "text" || part.type === "reasoning") append(part.text);
+                else if (part.type === "tool") append(`\n[tool:${part.call.name}] ${part.call.input}\n`);
+                else if (part.type === "error") append(`\n[error] ${part.text}\n`);
+                else if (part.type === "done") {}
+              }
+            }
+            split = buffer.indexOf("\n\n");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

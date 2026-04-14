@@ -69,7 +69,7 @@ describe("codex provider request shape", () => {
     const requestHeaders = headers(calls[0]!)
     expect(requestHeaders.Authorization).toBe(`Bearer ${access}`)
     expect(requestHeaders["Content-Type"]).toBe("application/json")
-    expect(requestHeaders.originator).toBe("opencode")
+    expect(requestHeaders.originator).toBe("tiny-agent-runtime")
     expect(requestHeaders["ChatGPT-Account-Id"]).toBe("acct_123")
     expect(requestHeaders.session_id).toBe("sess_123")
     expect(requestHeaders["User-Agent"]).toContain("@pumpkinredbean/tiny-agent-runtime/0.0.0")

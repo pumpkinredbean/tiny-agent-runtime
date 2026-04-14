@@ -152,7 +152,7 @@ export const codex: Adapter<CodexAuth> & {
       Authorization: `Bearer ${next.access}`,
       "Content-Type": "application/json",
       "User-Agent": `@pumpkinredbean/tiny-agent-runtime/0.0.0 (${os.platform()} ${os.release()}; ${os.arch()})`,
-      originator: "opencode",
+      originator: "tiny-agent-runtime",
       session_id: session(next.access) ?? crypto.randomUUID(),
     }
     if (next.accountId) headers["ChatGPT-Account-Id"] = next.accountId

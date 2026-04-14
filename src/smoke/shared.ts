@@ -1,4 +1,3 @@
-import { file as bridgeFile, get as bridgeGet } from "../auth/opencode"
 import { file as authFile, get, set } from "../auth/store"
 import type { CodexAuth, CopilotAuth } from "../auth/contracts"
 import type { ProviderID } from "../core/contracts"
@@ -37,24 +36,13 @@ export function pick(argv: string[], env: Env, force?: ProviderID): Pick {
 }
 
 export function miss(id: ProviderID, env: Env) {
-  return `missing ${id} oauth in ${env.RUNTIME_AUTH_PATH ?? authFile()} (optional legacy import from ${env.OPENCODE_AUTH_PATH ?? bridgeFile()})`
+  return `missing ${id} oauth in ${env.RUNTIME_AUTH_PATH ?? authFile()}`
 }
 
 async function loadAuth(id: "copilot"): Promise<CopilotAuth | undefined>
 async function loadAuth(id: "codex"): Promise<CodexAuth | undefined>
 async function loadAuth(id: ProviderID) {
-  if (id === "copilot") {
-    const hit = await get("copilot")
-    if (hit) return hit
-    const next = await bridgeGet("github-copilot")
-    if (next) await set("copilot", next)
-    return next
-  }
-  const hit = await get("codex")
-  if (hit) return hit
-  const next = await bridgeGet("openai")
-  if (next) await set("codex", next)
-  return next
+  return id === "copilot" ? get("copilot") : get("codex")
 }
 
 function changed(

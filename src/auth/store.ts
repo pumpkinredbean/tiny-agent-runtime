@@ -7,11 +7,6 @@ type File = Partial<{
   codex: CodexAuth
 }>
 
-const legacyKey = {
-  copilot: "github-copilot",
-  codex: "openai",
-} as const
-
 function oauth(input: unknown) {
   if (!input || typeof input !== "object") return
   if (!("refresh" in input) || typeof input.refresh !== "string") return
@@ -49,8 +44,8 @@ function from(input: unknown) {
   if (!input || typeof input !== "object") return {}
   const file = input as Record<string, unknown>
   return {
-    copilot: copilot(file.copilot ?? file["github-copilot"]),
-    codex: codex(file.codex ?? file.openai),
+    copilot: copilot(file.copilot),
+    codex: codex(file.codex),
   } satisfies File
 }
 
@@ -73,8 +68,6 @@ function normalized(input: Record<string, unknown>) {
   const next = { ...input }
   delete next.copilot
   delete next.codex
-  delete next[legacyKey.copilot]
-  delete next[legacyKey.codex]
 
   const parsed = from(input)
   if (parsed.copilot) next.copilot = parsed.copilot

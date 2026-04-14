@@ -11,10 +11,10 @@ This task list is ordered to move the runtime from the current validated prototy
 ## 2. Complete auth ownership transition
 
 - [x] Make the runtime auth store the primary persisted auth source.
-- [x] Canonicalize runtime-owned auth under top-level provider keys.
+- [x] Store runtime-owned auth under top-level provider keys.
 - [x] Add a native Copilot login path that persists successful device-flow auth into the runtime store.
 - [x] Add a native Codex login path that persists successful headless device-flow auth into the runtime store.
-- [x] Keep the legacy auth bridge documented as optional compatibility infrastructure, not the core runtime auth model.
+- [x] Make the runtime store the only auth source in-repo.
 
 ## 3. Add provider request-shape regression coverage
 
@@ -51,7 +51,7 @@ This task list is ordered to move the runtime from the current validated prototy
 ## 8. Tighten repo-facing usability docs
 
 - [x] Document the current validated baseline: Copilot smoke, Copilot loop E2E, and Codex smoke after the instructions fix.
-- [x] Document the current auth ownership model: runtime store primary, native logins first, bridge optional.
+- [x] Document the current auth ownership model: runtime store primary, native logins first.
 - [x] Document what flows are currently supported versus still unproven.
 - [x] Document expected setup and runtime entrypoints for repeatable local use.
 - [ ] Document known limitations until broader parity is validated.
