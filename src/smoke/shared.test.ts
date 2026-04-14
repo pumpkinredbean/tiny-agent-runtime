@@ -25,7 +25,7 @@ describe("smoke pick", () => {
 
   test("returns a clear bridge path for missing auth", () => {
     expect(miss("codex", { RUNTIME_AUTH_PATH: "/tmp/runtime-auth.json", OPENCODE_AUTH_PATH: "/tmp/auth.json" })).toBe(
-      "missing codex oauth in /tmp/runtime-auth.json (optional import from /tmp/auth.json)",
+      "missing codex oauth in /tmp/runtime-auth.json (optional legacy import from /tmp/auth.json)",
     )
   })
 

@@ -37,7 +37,7 @@ export function pick(argv: string[], env: Env, force?: ProviderID): Pick {
 }
 
 export function miss(id: ProviderID, env: Env) {
-  return `missing ${id} oauth in ${env.RUNTIME_AUTH_PATH ?? authFile()} (optional import from ${env.OPENCODE_AUTH_PATH ?? bridgeFile()})`
+  return `missing ${id} oauth in ${env.RUNTIME_AUTH_PATH ?? authFile()} (optional legacy import from ${env.OPENCODE_AUTH_PATH ?? bridgeFile()})`
 }
 
 async function loadAuth(id: "copilot"): Promise<CopilotAuth | undefined>

@@ -14,7 +14,7 @@ This task list is ordered to move the runtime from the current validated prototy
 - [x] Canonicalize runtime-owned auth under top-level provider keys.
 - [x] Add a native Copilot login path that persists successful device-flow auth into the runtime store.
 - [x] Add a native Codex login path that persists successful headless device-flow auth into the runtime store.
-- [x] Keep the opencode auth bridge documented as optional compatibility infrastructure, not the core runtime auth model.
+- [x] Keep the legacy auth bridge documented as optional compatibility infrastructure, not the core runtime auth model.
 
 ## 3. Add provider request-shape regression coverage
 
@@ -59,5 +59,5 @@ This task list is ordered to move the runtime from the current validated prototy
 ## 9. Define a practical-usability exit bar
 
 - [ ] List the minimum validation set required before calling the runtime practically usable.
-- [ ] List the remaining non-goals so the repo does not overstate parity with opencode.
+- [ ] List the remaining non-goals so the repo does not overstate unvalidated parity claims.
 - [ ] Reorder this task list as new live validation evidence lands.

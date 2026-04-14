@@ -8,15 +8,15 @@ This roadmap tracks the work required to move `tiny-agent-runtime` from a valida
 - Runtime auth store ownership is in place and canonicalized.
 - Native Copilot login exists via `bun run login:copilot`.
 - Native Codex headless login exists via `bun run login:codex`.
-- The opencode auth bridge is optional compatibility infrastructure, not the primary auth model.
+- The legacy auth bridge is optional compatibility infrastructure, not the primary auth model.
 - Copilot live smoke succeeded.
 - Copilot loop end-to-end validation with a local tool round-trip succeeded.
 - Codex live smoke succeeded after fixing top-level instructions handling in the adapter path.
-- The current loop is a clean reimplementation of the required behavior, not a byte-for-byte clone of opencode.
+- The current loop is a clean implementation of the required behavior.
 
 ## Phase 1 - Establish standalone auth ownership
 
-Goal: make runtime-owned auth the default model instead of depending on opencode state.
+Goal: make runtime-owned auth the default model instead of depending on bridge-managed state.
 
 - Completed: standalone runtime repository created.
 - Completed: runtime auth store became the primary persisted auth source.

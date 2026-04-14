@@ -1,6 +1,6 @@
 # tiny-agent-runtime
 
-Standalone runtime package extracted from the opencode runtime package.
+Standalone minimal runtime package for agent providers and loop orchestration.
 
 ## Package
 
@@ -25,7 +25,7 @@ Standalone runtime package extracted from the opencode runtime package.
 - `bun run login:codex` is the primary native login path for Codex; it runs the headless device flow and persists successful auth into the runtime store.
 - Pass an enterprise host as the first CLI argument, or set `RUNTIME_COPILOT_ENTERPRISE_URL`, when targeting GitHub Enterprise Copilot.
 - Smoke commands read the runtime store first.
-- The opencode auth bridge at `OPENCODE_AUTH_PATH` or the default opencode auth path is optional compatibility infrastructure only.
+- The legacy auth bridge at `OPENCODE_AUTH_PATH` or its default bridge path is optional compatibility infrastructure only.
 - Legacy bridge-shaped provider keys remain readable for migration, but runtime-owned entries are normalized back to canonical top-level keys.
 - Codex smoke persists refreshed auth back into the runtime store.
 - Current auth scope in the repo includes native Copilot login, native Codex headless login, and optional bridge compatibility support.
