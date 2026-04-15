@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { copilot } from "./copilot"
+import { copilot } from "../providers/copilot/provider"
 import type { Msg, Tool } from "../core/contracts"
 
 const originalFetch = globalThis.fetch

@@ -15,5 +15,6 @@
     "allowJs": true,
     "isolatedModules": true
   },
-  "include": ["src"]
+  "include": ["src", "examples", "scripts"],
+  "exclude": ["dist"]
 }

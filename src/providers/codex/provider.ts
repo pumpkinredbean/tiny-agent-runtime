@@ -1,7 +1,8 @@
 import os from "node:os"
-import type { Adapter, Msg } from "../core/contracts"
-import { responses } from "../core/sse"
-import type { CodexAuth } from "../auth/contracts"
+import type { Adapter } from "../../core/contracts"
+import { responses } from "../../core/sse"
+import { instructions, mapResponseTools, toCodexResponseInput, withoutSystem } from "../../core/variants"
+import type { CodexAuth } from "../../auth/contracts"
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const ISSUER = "https://auth.openai.com"
@@ -24,23 +25,6 @@ export type CodexTokens = {
   refresh_token: string
   expires_in?: number
 }
-
-type Input =
-  | {
-      role: "system" | "user" | "assistant"
-      content: Array<{ type: "input_text"; text: string }>
-    }
-  | {
-      type: "function_call_output"
-      call_id: string
-      output: string
-    }
-  | {
-      type: "function_call"
-      call_id: string
-      name: string
-      arguments: string
-    }
 
 export function parseClaims(token: string) {
   const part = token.split(".")[1]
@@ -86,54 +70,19 @@ async function refresh(auth: CodexAuth) {
     }).toString(),
   })
   if (!res.ok) throw new Error(`codex refresh failed: ${res.status}`)
-    const data = (await res.json()) as CodexTokens
-    return {
-      type: "oauth" as const,
-      refresh: data.refresh_token,
-      access: data.access_token,
-      expires: Date.now() + (data.expires_in ?? 3600) * 1000,
-      accountId: extractAccountId(data) ?? auth.accountId,
-    }
+  const data = (await res.json()) as CodexTokens
+  return {
+    type: "oauth" as const,
+    refresh: data.refresh_token,
+    access: data.access_token,
+    expires: Date.now() + (data.expires_in ?? 3600) * 1000,
+    accountId: extractAccountId(data) ?? auth.accountId,
   }
+}
 
 function current(auth: CodexAuth) {
   if (auth.access && auth.expires > Date.now() + 15_000) return auth
   return refresh(auth)
-}
-
-function input(item: Msg): Input[] {
-  if ("content" in item && item.role !== "tool") {
-    return [
-      {
-        role: item.role,
-        content: [{ type: "input_text", text: item.content }],
-      },
-    ]
-  }
-
-  if (item.role === "tool") {
-    return [
-      {
-        type: "function_call_output",
-        call_id: item.id,
-        output: item.content,
-      },
-    ]
-  }
-
-  return item.calls.map((call) => ({
-    type: "function_call",
-    call_id: call.id,
-    name: call.name,
-    arguments: call.input,
-  }))
-}
-
-function instructions(msg: Msg[]) {
-  return msg
-    .filter((item) => "content" in item && item.role === "system")
-    .map((item) => ("content" in item ? item.content : ""))
-    .join("\n") || "You are a helpful assistant."
 }
 
 export const codex: Adapter<CodexAuth> & {
@@ -153,7 +102,7 @@ export const codex: Adapter<CodexAuth> & {
       "Content-Type": "application/json",
       "User-Agent": `@pumpkinredbean/tiny-agent-runtime/0.0.0 (${os.platform()} ${os.release()}; ${os.arch()})`,
       originator: "tiny-agent-runtime",
-      session_id: session(next.access) ?? crypto.randomUUID(),
+      session_id: req.sessionId ?? session(next.access) ?? crypto.randomUUID(),
     }
     if (next.accountId) headers["ChatGPT-Account-Id"] = next.accountId
     const res = await fetch(URL, {
@@ -163,13 +112,8 @@ export const codex: Adapter<CodexAuth> & {
       body: JSON.stringify({
         model: req.model,
         instructions: instructions(req.msg),
-        input: req.msg.filter((item) => item.role !== "system").flatMap((item) => input(item)),
-        tools: req.tools?.map((item) => ({
-          type: "function",
-          name: item.name,
-          description: item.description,
-          parameters: item.schema ?? { type: "object", properties: {} },
-        })),
+        input: toCodexResponseInput(withoutSystem(req.msg)),
+        tools: mapResponseTools(req.tools),
         store: false,
         stream: true,
       }),

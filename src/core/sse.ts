@@ -1,4 +1,5 @@
 import type { Call, Part } from "./contracts"
+import { normalizeUsage } from "./usage"
 
 type SSE = {
   event?: string
@@ -64,9 +65,19 @@ function flush(calls: Map<number | string, Call>, sent: Set<number | string>) {
     })
 }
 
+function* usagePart(value: unknown, sent: Set<string>) {
+  const usage = normalizeUsage(value)
+  if (!usage) return
+  const key = JSON.stringify(usage)
+  if (sent.has(key)) return
+  sent.add(key)
+  yield { type: "usage", usage } satisfies Part
+}
+
 export async function* chat(body: ReadableStream<Uint8Array>) {
   const calls = new Map<number, Call>()
   const sent = new Set<number>()
+  const usage = new Set<string>()
 
   for await (const item of raw(body)) {
     if (item.data === "[DONE]") {
@@ -76,6 +87,7 @@ export async function* chat(body: ReadableStream<Uint8Array>) {
     }
 
     const data = json(item.data)
+    yield* usagePart((data as Record<string, unknown>).usage, usage)
     const choice = Array.isArray(data.choices) ? data.choices[0] : undefined
     const delta = choice && typeof choice === "object" ? choice.delta : undefined
 
@@ -114,6 +126,7 @@ export async function* chat(body: ReadableStream<Uint8Array>) {
 export async function* responses(body: ReadableStream<Uint8Array>) {
   const calls = new Map<string, Call>()
   const sent = new Set<string>()
+  const usage = new Set<string>()
 
   for await (const item of raw(body)) {
     if (item.data === "[DONE]") {
@@ -123,6 +136,9 @@ export async function* responses(body: ReadableStream<Uint8Array>) {
     }
 
     const data = json(item.data)
+    yield* usagePart((data as Record<string, unknown>).usage, usage)
+    const response = obj((data as Record<string, unknown>).response)
+    yield* usagePart(response?.usage, usage)
     const type = typeof data.type === "string" ? data.type : item.event
 
     if (type === "response.output_text.delta" && typeof data.delta === "string" && data.delta) {

@@ -1,20 +1,57 @@
-import { file as authFile, get, set } from "../../src/auth/store"
-import type { CodexAuth, CopilotAuth } from "../../src/auth/contracts"
-import type { Msg, Part, ProviderID } from "../../src/core/contracts"
-import { codex } from "../../src/provider/codex"
-import { copilot } from "../../src/provider/copilot"
+import {
+  appendUserText,
+  changedCodexAuth,
+  codex,
+  copilot,
+  createToolRegistry,
+  createSession,
+  createSessionStore,
+  file as authFile,
+  get,
+  resolveRuntimeModel,
+  sessionMessages,
+  set,
+  type CodexAuth,
+  type CopilotAuth,
+  type Part,
+  type ProviderID,
+  type SessionTurn,
+  type ToolPlugin,
+} from "../../src/index"
 
-type PromptHistory = {
-  role: "user" | "assistant"
-  content: string
+const exampleWeatherPlugin: ToolPlugin = {
+  name: "browser-sample-weather",
+  tools: [
+    {
+      name: "weather",
+      description: "Example-only weather tool wired by the browser sample.",
+      schema: {
+        type: "object",
+        properties: { city: { type: "string" } },
+        required: ["city"],
+      },
+      async call(input) {
+        const city =
+          input && typeof input === "object" && "city" in input && typeof input.city === "string" ? input.city : "unknown"
+        return JSON.stringify({ city, forecast: "sunny" })
+      },
+    },
+  ],
 }
+
+export const exampleToolRegistry = createToolRegistry({ plugins: [exampleWeatherPlugin] })
+
+// Example-only wiring for a future loop endpoint:
+// await loop({ ...input, tools: exampleToolRegistry.list() })
+// The package still does not ship any built-in tools.
 
 type PromptRequest = {
   provider: ProviderID
   model?: string
   system?: string
+  sessionId?: string
   prompt: string
-  history: PromptHistory[]
+  history: SessionTurn[]
 }
 
 type AppDeps = {
@@ -26,6 +63,7 @@ type AppDeps = {
   copilotModels(auth: CopilotAuth): Promise<string[]>
   copilotPrompt: typeof copilot.prompt
   codexPrompt: typeof codex.prompt
+  sessionStore: ReturnType<typeof createSessionStore>
 }
 
 const encoder = new TextEncoder()
@@ -50,7 +88,7 @@ function history(value: unknown) {
     return {
       role: item.role,
       content: item.content,
-    } satisfies PromptHistory
+    } satisfies SessionTurn
   })
 }
 
@@ -73,37 +111,22 @@ export async function parsePromptRequest(req: Request, env: NodeJS.ProcessEnv): 
 
   const model = text(input.model) || undefined
   const system = text(input.system) || undefined
+  const sessionId = text(input.sessionId) || undefined
 
   return {
     provider: id,
     model,
     system,
+    sessionId,
     prompt,
     history: history(input.history),
   }
 }
 
-function changed(a: CodexAuth, b: CodexAuth) {
-  return a.refresh !== b.refresh || a.access !== b.access || a.expires !== b.expires || a.accountId !== b.accountId
-}
-
 async function resolveModel(id: "copilot", env: NodeJS.ProcessEnv, auth: CopilotAuth, deps: AppDeps): Promise<string>
 async function resolveModel(id: "codex", env: NodeJS.ProcessEnv, auth: CodexAuth, deps: AppDeps): Promise<string>
 async function resolveModel(id: ProviderID, env: NodeJS.ProcessEnv, auth: CopilotAuth | CodexAuth, deps: AppDeps) {
-  if (env.RUNTIME_MODEL) return env.RUNTIME_MODEL
-  if (id === "codex") return "gpt-5.4-mini"
-  const models = await deps.copilotModels(auth as CopilotAuth)
-  const model = models[0]
-  if (!model) throw new Error("no copilot model available")
-  return model
-}
-
-function msg(input: PromptRequest): Msg[] {
-  return [
-    ...(input.system ? [{ role: "system", content: input.system } satisfies Msg] : []),
-    ...input.history,
-    { role: "user", content: input.prompt },
-  ]
+  return resolveRuntimeModel(id, auth, { env, copilotModels: deps.copilotModels }, undefined)
 }
 
 function sse(event: string, data: unknown) {
@@ -115,28 +138,60 @@ function problem(status: number, message: string) {
 }
 
 async function promptResponse(input: PromptRequest, deps: AppDeps) {
+  const stored = input.sessionId ? await deps.sessionStore.create(input.sessionId) : await deps.sessionStore.create()
+  const transcript = input.sessionId ? stored.transcript : input.history
+
+  if (!input.sessionId) {
+    for (const msg of input.history) await deps.sessionStore.appendMessage(stored.id, msg)
+  }
+
+  await deps.sessionStore.appendMessage(stored.id, { role: "user", content: input.prompt })
+  const session = appendUserText(createSession({ id: stored.id, transcript }), input.prompt)
+
   if (input.provider === "copilot") {
     const auth = await deps.getAuth("copilot")
     if (!auth) return problem(401, `missing copilot oauth in ${deps.env.RUNTIME_AUTH_PATH ?? authFile()}`)
 
+    const model = input.model ?? (await resolveModel("copilot", deps.env, auth, deps))
+
     const run = await deps.copilotPrompt(auth, {
-      model: input.model ?? (await resolveModel("copilot", deps.env, auth, deps)),
-      msg: msg(input),
+      model,
+      msg: sessionMessages(session, { system: input.system }),
     })
 
-    return new Response(streamParts(run.events), { headers: sseHeaders() })
+    return new Response(
+      streamParts(run.events, {
+        sessionId: stored.id,
+        onComplete: async (text) => {
+          if (text) await deps.sessionStore.appendMessage(stored.id, { role: "assistant", content: text })
+          await deps.sessionStore.appendRun(stored.id, { provider: input.provider, model, system: input.system })
+        },
+      }),
+      { headers: sseHeaders() },
+    )
   }
 
   const auth = await deps.getAuth("codex")
   if (!auth) return problem(401, `missing codex oauth in ${deps.env.RUNTIME_AUTH_PATH ?? authFile()}`)
 
+  const model = input.model ?? (await resolveModel("codex", deps.env, auth, deps))
+
   const run = await deps.codexPrompt(auth, {
-    model: input.model ?? (await resolveModel("codex", deps.env, auth, deps)),
-    msg: msg(input),
+    model,
+    msg: sessionMessages(session, { system: input.system }),
   })
 
-  if (changed(run.auth, auth)) await deps.setCodexAuth(run.auth)
-  return new Response(streamParts(run.events), { headers: sseHeaders() })
+  if (changedCodexAuth(run.auth, auth)) await deps.setCodexAuth(run.auth)
+  return new Response(
+    streamParts(run.events, {
+      sessionId: stored.id,
+      onComplete: async (text) => {
+        if (text) await deps.sessionStore.appendMessage(stored.id, { role: "assistant", content: text })
+        await deps.sessionStore.appendRun(stored.id, { provider: input.provider, model, system: input.system })
+      },
+    }),
+    { headers: sseHeaders() },
+  )
 }
 
 function sseHeaders() {
@@ -147,14 +202,20 @@ function sseHeaders() {
   }
 }
 
-function streamParts(events: AsyncIterable<Part>) {
+function streamParts(events: AsyncIterable<Part>, input: { sessionId: string; onComplete?: (text: string) => Promise<void> }) {
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      let text = ""
       try {
-        for await (const part of events) controller.enqueue(sse("part", part))
+        controller.enqueue(sse("session", { id: input.sessionId }))
+        for await (const part of events) {
+          if (part.type === "text") text += part.text
+          controller.enqueue(sse("part", part))
+        }
       } catch (err) {
         controller.enqueue(sse("part", { type: "error", text: err instanceof Error ? err.message : String(err) }))
       } finally {
+        if (input.onComplete) await input.onComplete(text)
         controller.close()
       }
     },
@@ -176,6 +237,7 @@ export function createSampleApp(input: Partial<AppDeps> = {}) {
     copilotModels: (auth) => copilot.models(auth),
     copilotPrompt: (auth, req) => copilot.prompt(auth, req),
     codexPrompt: (auth, req) => codex.prompt(auth, req),
+    sessionStore: createSessionStore(),
     ...input,
   }
 

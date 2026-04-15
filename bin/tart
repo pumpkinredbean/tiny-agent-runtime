@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -eu
+
+basedir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec bun "$basedir/../dist/cli/tart.js" "$@"

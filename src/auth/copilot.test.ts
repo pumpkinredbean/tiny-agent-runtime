@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { loginCopilot, normalizeEnterpriseUrl, type CopilotDeviceCode } from "./copilot"
+import { loginCopilot, normalizeEnterpriseUrl, type CopilotDeviceCode } from "../providers/copilot/auth"
 import type { CopilotAuth } from "./contracts"
 
 const device: CopilotDeviceCode = {

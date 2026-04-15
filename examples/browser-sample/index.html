@@ -22,7 +22,7 @@
   <body>
     <main>
       <h1>tiny-agent-runtime</h1>
-      <p class="muted">Direct prompt mode over the local runtime auth store.</p>
+      <p class="muted">Thin prompt demo over the local runtime auth store with resumable SDK-backed sessions.</p>
       <form id="prompt-form">
         <div class="row">
           <label>
@@ -35,6 +35,16 @@
           <label>
             Model (optional)
             <input name="model" placeholder="Use server default" />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Session ID (optional)
+            <input name="sessionId" placeholder="Auto-created and reused in this browser" />
+          </label>
+          <label>
+            Session controls
+            <button type="button" id="new-session">Start new session</button>
           </label>
         </div>
         <label>
@@ -52,9 +62,23 @@
     <script type="module">
       const form = document.getElementById("prompt-form");
       const output = document.getElementById("output");
+      const sessionInput = form.elements.namedItem("sessionId");
+      const newSession = document.getElementById("new-session");
+      const storageKey = "tiny-agent-runtime.sessionId";
+
+      if (sessionInput instanceof HTMLInputElement) {
+        sessionInput.value = localStorage.getItem(storageKey) ?? "";
+      }
 
       function append(text) {
         output.textContent += text;
+      }
+
+      function setSessionId(value) {
+        if (!(sessionInput instanceof HTMLInputElement)) return;
+        sessionInput.value = value;
+        if (value) localStorage.setItem(storageKey, value);
+        else localStorage.removeItem(storageKey);
       }
 
       function parseEvent(block) {
@@ -67,6 +91,11 @@
         return event;
       }
 
+      newSession.addEventListener("click", () => {
+        setSessionId("");
+        output.textContent = "Ready.";
+      });
+
       form.addEventListener("submit", async (node) => {
         node.preventDefault();
         output.textContent = "";
@@ -78,6 +107,7 @@
           body: JSON.stringify({
             provider: data.get("provider"),
             model: data.get("model"),
+            sessionId: data.get("sessionId"),
             system: data.get("system"),
             prompt: data.get("prompt"),
           }),
@@ -103,7 +133,10 @@
             buffer = buffer.slice(split + 2);
             if (block) {
               const evt = parseEvent(block);
-              if (evt.event === "part") {
+              if (evt.event === "session") {
+                const payload = JSON.parse(evt.data);
+                if (payload && typeof payload.id === "string") setSessionId(payload.id);
+              } else if (evt.event === "part") {
                 const part = JSON.parse(evt.data);
                 if (part.type === "text" || part.type === "reasoning") append(part.text);
                 else if (part.type === "tool") append(`\n[tool:${part.call.name}] ${part.call.input}\n`);

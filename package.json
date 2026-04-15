@@ -5,23 +5,56 @@
   "description": "Standalone runtime for agent providers and loop orchestration",
   "type": "module",
   "license": "MIT",
-  "packageManager": "bun@1.3.11",
+  "packageManager": "bun@1.3.5",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "tart": "./bin/tart"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
   "scripts": {
-    "login:codex": "bun run src/auth/codex.cli.ts",
-    "login:copilot": "bun run src/auth/copilot.cli.ts",
-    "typecheck": "bunx tsc --noEmit",
-    "test": "bun test src",
-    "sample": "bun run examples/browser-sample/server.ts",
-    "smoke": "bun run src/smoke/index.ts",
-    "smoke:copilot": "bun run src/smoke/copilot.ts",
-    "smoke:codex": "bun run src/smoke/codex.ts"
+    "build": "rm -rf dist && bunx tsc -p tsconfig.build.json",
+    "login:codex": "bun run src/cli/tart.ts login codex",
+    "login:copilot": "bun run src/cli/tart.ts login copilot",
+    "prepack": "bun run build",
+    "typecheck": "bunx tsc -p tsconfig.json --noEmit",
+    "test": "bun test src examples",
+    "validate:live:copilot:multiturn": "bun run scripts/live-copilot-multiturn.ts",
+    "validate:live:codex:loop": "bun run scripts/live-codex-loop.ts",
+    "sample": "bun run examples/browser-sample/server.ts"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./auth": "./src/auth/contracts.ts",
-    "./auth/codex": "./src/auth/codex.ts",
-    "./auth/copilot": "./src/auth/copilot.ts",
-    "./auth/store": "./src/auth/store.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/contracts.d.ts",
+      "import": "./dist/auth/contracts.js",
+      "default": "./dist/auth/contracts.js"
+    },
+    "./auth/store": {
+      "types": "./dist/auth/store.d.ts",
+      "import": "./dist/auth/store.js",
+      "default": "./dist/auth/store.js"
+    },
+    "./providers/copilot": {
+      "types": "./dist/providers/copilot/index.d.ts",
+      "import": "./dist/providers/copilot/index.js",
+      "default": "./dist/providers/copilot/index.js"
+    },
+    "./providers/codex": {
+      "types": "./dist/providers/codex/index.d.ts",
+      "import": "./dist/providers/codex/index.js",
+      "default": "./dist/providers/codex/index.js"
+    }
+  },
+  "engines": {
+    "bun": ">=1.3.5"
   },
   "devDependencies": {
     "@types/bun": "1.3.11",

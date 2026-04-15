@@ -1,6 +1,7 @@
-import type { Adapter, Msg, Prompt, Tool } from "../core/contracts"
-import { chat, responses } from "../core/sse"
-import type { CopilotAuth } from "../auth/contracts"
+import type { Adapter, Msg } from "../../core/contracts"
+import { chat, responses } from "../../core/sse"
+import { mapChatTools, mapResponseTools, toChatMessages, toResponseInput } from "../../core/variants"
+import type { CopilotAuth } from "../../auth/contracts"
 
 const CLIENT_ID = "Ov23li8tweQw6odWQebz"
 const WAIT = 3000
@@ -18,23 +19,6 @@ type Poll = {
   error?: string
   interval?: number
 }
-
-type Input =
-  | {
-      role: "system" | "user" | "assistant"
-      content: Array<{ type: "input_text"; text: string }>
-    }
-  | {
-      type: "function_call_output"
-      call_id: string
-      output: string
-    }
-  | {
-      type: "function_call"
-      call_id: string
-      name: string
-      arguments: string
-    }
 
 function domain(url: string) {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "")
@@ -70,76 +54,6 @@ function use(model: string) {
 function max(model: string, n?: number) {
   if (model.includes("gpt")) return undefined
   return n
-}
-
-function mapTools(tools?: Tool[]) {
-  return tools?.map((item) => ({
-    type: "function",
-    function: {
-      name: item.name,
-      description: item.description,
-      parameters: item.schema ?? { type: "object", properties: {} },
-    },
-  }))
-}
-
-function chatMsg(item: Msg) {
-  if ("content" in item && item.role !== "tool") {
-    return { role: item.role, content: item.content }
-  }
-
-  if (item.role === "tool") {
-    return {
-      role: "tool",
-      tool_call_id: item.id,
-      content: item.content,
-    }
-  }
-
-  return {
-    role: "assistant",
-    content: "",
-    tool_calls: item.calls.map((call) => ({
-      id: call.id,
-      type: "function",
-      function: {
-        name: call.name,
-        arguments: call.input,
-      },
-    })),
-  }
-}
-
-function responseMsg(item: Msg): Input[] {
-  if ("content" in item && item.role !== "tool") {
-    return [
-      {
-        role: item.role,
-        content: [{ type: "input_text", text: item.content }],
-      },
-    ]
-  }
-
-  if (item.role === "tool") {
-    return [
-      {
-        type: "function_call_output",
-        call_id: item.id,
-        output: item.content,
-      },
-    ]
-  }
-
-  return item.calls.map((call) => ({
-    type: "function_call",
-    call_id: call.id,
-    name: call.name,
-    arguments: call.input,
-  }))
-}
-
-function responseInput(msg: Msg[]) {
-  return msg.flatMap((item) => responseMsg(item))
 }
 
 export const copilot: Adapter<CopilotAuth> & {
@@ -230,20 +144,15 @@ export const copilot: Adapter<CopilotAuth> & {
         kind === "chat"
           ? {
               model: req.model,
-              messages: req.msg.map((item) => chatMsg(item)),
-              tools: mapTools(req.tools),
+              messages: toChatMessages(req.msg),
+              tools: mapChatTools(req.tools),
               stream: true,
               max_tokens: max(req.model, req.max),
             }
           : {
               model: req.model,
-              input: responseInput(req.msg),
-              tools: req.tools?.map((item) => ({
-                type: "function",
-                name: item.name,
-                description: item.description,
-                parameters: item.schema ?? { type: "object", properties: {} },
-              })),
+              input: toResponseInput(req.msg),
+              tools: mapResponseTools(req.tools),
               store: false,
               stream: true,
               max_output_tokens: max(req.model, req.max),

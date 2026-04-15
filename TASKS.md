@@ -16,48 +16,66 @@ This task list is ordered to move the runtime from the current validated prototy
 - [x] Add a native Codex login path that persists successful headless device-flow auth into the runtime store.
 - [x] Make the runtime store the only auth source in-repo.
 
-## 3. Add provider request-shape regression coverage
+## 3. Add reusable session and variant assembly
 
-- [ ] Add tests for the request shapes currently known to work for Copilot.
-- [ ] Add tests for the request shapes currently known to work for Codex.
-- [ ] Add a regression test for the top-level instructions handling that fixed Codex smoke.
+- [x] Add a canonical SDK helper for assembling `system + history + prompt` into runtime messages.
+- [x] Add a shared provider transform layer for chat/responses request variants.
+- [x] Reuse the shared session path in the CLI shell and browser sample.
 
-## 4. Harden the shared loop around tool execution
+## 4. Add provider request-shape regression coverage
 
-- [ ] Define expected behavior when a tool throws, returns invalid data, or times out.
-- [ ] Add tests for tool error propagation and recovery behavior.
-- [ ] Tighten repeated-call and retry boundaries so failure paths are predictable.
+- [x] Add tests for the request shapes currently known to work for Copilot.
+- [x] Add tests for the request shapes currently known to work for Codex.
+- [x] Add a regression test for the top-level instructions handling that fixed the Codex live validation path.
 
-## 5. Harden auth lifecycle behavior
+## 5. Harden the shared loop around tool execution
 
-- [ ] Validate token refresh behavior for longer-running executions.
-- [ ] Add regression coverage for expired or refreshed auth state.
+- [x] Add a thin `src/tools` extension skeleton with registry/composition helpers and backward-compatible loop integration.
+- [x] Keep built-in package-owned tools out of scope while documenting example-only wiring.
+- [x] Define expected behavior when a tool throws or returns invalid data.
+- [x] Define explicit timeout behavior for tool execution.
+- [x] Add tests for tool error propagation and recovery behavior.
+- [x] Tighten repeated-call and retry boundaries so failure paths are predictable.
 
-## 6. Add basic runtime observability
+## 6. Harden auth lifecycle behavior
 
-- [ ] Expose usage accounting needed to understand request volume and token consumption.
-- [ ] Expose cost-related plumbing where provider responses make that available.
-- [ ] Make these signals available without changing the shared loop/provider boundary unnecessarily.
+- [x] Validate token refresh behavior for longer-running executions.
+- [x] Add regression coverage for expired or refreshed auth state.
 
-## 7. Expand end-to-end validation
+## 7. Add basic runtime observability
 
-- [x] Validate Copilot live smoke.
+- [x] Expose usage accounting needed to understand request volume and token consumption.
+- [x] Expose cost-related plumbing where provider responses make that available.
+- [x] Make these signals available without changing the shared loop/provider boundary unnecessarily.
+
+## 8. Expand end-to-end validation
+
+- [x] Validate Copilot live prompt path.
 - [x] Validate Copilot loop end-to-end with a local tool round-trip.
-- [x] Validate Codex live smoke after the instructions fix.
-- [ ] Add longer multi-turn live validation for Copilot.
-- [ ] Add loop-level end-to-end validation for Codex beyond smoke success.
-- [ ] Cover failure-recovery paths that are not exercised by today’s smoke commands.
+- [x] Validate Codex live prompt path after the instructions fix.
+- [x] Expand the default repo test path so browser-sample coverage runs by default.
+- [x] Add deterministic CLI multi-turn/session-resume integration coverage.
+- [x] Add deterministic browser-sample session-resume and failure-recovery coverage.
+- [x] Add longer multi-turn live validation for Copilot.
+- [x] Add loop-level end-to-end validation for Codex beyond current live prompt coverage.
+- [x] Cover failure-recovery paths that are not exercised by today’s validation commands.
 
-## 8. Tighten repo-facing usability docs
+## 9. Tighten repo-facing usability docs
 
-- [x] Document the current validated baseline: Copilot smoke, Copilot loop E2E, and Codex smoke after the instructions fix.
+- [x] Document the current validated baseline: Copilot live prompt, Copilot loop E2E, and Codex live prompt after the instructions fix.
 - [x] Document the current auth ownership model: runtime store primary, native logins first.
 - [x] Document what flows are currently supported versus still unproven.
 - [x] Document expected setup and runtime entrypoints for repeatable local use.
-- [ ] Document known limitations until broader parity is validated.
+- [x] Document known limitations until broader parity is validated.
 
-## 9. Define a practical-usability exit bar
+## 10. Add persistent session usability
 
-- [ ] List the minimum validation set required before calling the runtime practically usable.
-- [ ] List the remaining non-goals so the repo does not overstate unvalidated parity claims.
-- [ ] Reorder this task list as new live validation evidence lands.
+- [x] Add JSONL-backed session persistence with transcript and run metadata stored separately.
+- [x] Keep prompt assembly bound to transcript plus current run config only.
+- [x] Integrate resumable sessions into `tart chat` and the minimal browser sample.
+
+## 11. Define a practical-usability exit bar
+
+- [x] List the minimum validation set required before calling the runtime practically usable.
+- [x] List the remaining non-goals so the repo does not overstate unvalidated parity claims.
+- [x] Reorder this task list as new validation evidence lands.

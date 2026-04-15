@@ -1,6 +1,6 @@
-import { file, set } from "./store"
-import type { CodexAuth } from "./contracts"
-import { type CodexTokens, extractAccountId } from "../provider/codex"
+import { file, set } from "../../auth/store"
+import type { CodexAuth } from "../../auth/contracts"
+import { type CodexTokens, extractAccountId } from "./provider"
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const DEVICE_URL = "https://auth.openai.com/api/accounts/deviceauth/usercode"

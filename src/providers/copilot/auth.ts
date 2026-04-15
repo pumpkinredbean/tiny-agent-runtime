@@ -1,6 +1,6 @@
-import type { CopilotAuth } from "./contracts"
-import { file, set } from "./store"
-import { copilot } from "../provider/copilot"
+import type { CopilotAuth } from "../../auth/contracts"
+import { file, set } from "../../auth/store"
+import { copilot } from "./provider"
 
 export type CopilotDeviceCode = Awaited<ReturnType<(typeof copilot)["device"]>>
 

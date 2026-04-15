@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { auth, loginCodex, type CodexDeviceCode } from "./codex"
+import { auth, loginCodex, type CodexDeviceCode } from "../providers/codex/auth"
 import type { CodexAuth } from "./contracts"
 
 const device: CodexDeviceCode = {

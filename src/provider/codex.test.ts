@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { codex } from "./codex"
+import { codex } from "../providers/codex/provider"
 import type { Msg } from "../core/contracts"
 
 const originalFetch = globalThis.fetch
@@ -37,12 +37,22 @@ function headers(call: FetchCall) {
   return call.init?.headers as Record<string, string>
 }
 
+function captureWith(handler: (call: FetchCall, index: number) => Promise<Response> | Response) {
+  const calls: FetchCall[] = []
+  globalThis.fetch = (async (input, init) => {
+    const call = { input, init }
+    calls.push(call)
+    return handler(call, calls.length - 1)
+  }) as typeof globalThis.fetch
+  return calls
+}
+
 afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
 describe("codex provider request shape", () => {
-  test("sends top-level instructions and excludes system messages from input", async () => {
+  test("sends top-level instructions, excludes system messages, and skips plain assistant replay", async () => {
     const calls = capture()
     const access = token({ session_id: "sess_123" })
     const msg: Msg[] = [
@@ -93,10 +103,6 @@ describe("codex provider request shape", () => {
           call_id: "call_1",
           output: "result",
         },
-        {
-          role: "assistant",
-          content: [{ type: "input_text", text: "Done." }],
-        },
       ],
       tools: [
         {
@@ -109,5 +115,111 @@ describe("codex provider request shape", () => {
       store: false,
       stream: true,
     })
+  })
+
+  test("keeps assistant tool calls and tool results in replay input", async () => {
+    const calls = capture()
+
+    await codex.prompt(
+      { refresh: "refresh-token", access: token({ session_id: "sess_123" }), expires: Date.now() + 60_000 },
+      {
+        model: "gpt-5.4",
+        msg: [
+          { role: "user", content: "Use a tool." },
+          { role: "assistant", calls: [{ id: "call_1", name: "lookup", input: '{"id":1}' }] },
+          { role: "tool", id: "call_1", name: "lookup", content: "result" },
+        ],
+      },
+    )
+
+    expect(body(calls[0]!).input).toEqual([
+      {
+        role: "user",
+        content: [{ type: "input_text", text: "Use a tool." }],
+      },
+      {
+        type: "function_call",
+        call_id: "call_1",
+        name: "lookup",
+        arguments: '{"id":1}',
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output: "result",
+      },
+    ])
+  })
+
+  test("prefers prompt sessionId over token session claim", async () => {
+    const calls = capture()
+    const access = token({ session_id: "sess_token" })
+
+    await codex.prompt(
+      { refresh: "refresh-token", access, expires: Date.now() + 60_000 },
+      {
+        model: "gpt-5.4",
+        msg: [{ role: "user", content: "Hi" }],
+        sessionId: "sess_logical",
+      },
+    )
+
+    expect(headers(calls[0]!).session_id).toBe("sess_logical")
+  })
+
+  test("falls back to token session claim when prompt sessionId is absent", async () => {
+    const calls = capture()
+    const access = token({ session_id: "sess_token" })
+
+    await codex.prompt(
+      { refresh: "refresh-token", access, expires: Date.now() + 60_000 },
+      {
+        model: "gpt-5.4",
+        msg: [{ role: "user", content: "Hi" }],
+      },
+    )
+
+    expect(headers(calls[0]!).session_id).toBe("sess_token")
+  })
+
+  test("refreshes near-expiry auth before sending the codex request", async () => {
+    const refreshedAccess = token({ session_id: "sess_refreshed" })
+    const calls = captureWith((call, index) => {
+      if (index === 0) {
+        expect(String(call.input)).toBe("https://auth.openai.com/oauth/token")
+        expect(call.init?.method).toBe("POST")
+        expect(typeof call.init?.body).toBe("string")
+        expect(String(call.init?.body)).toContain("grant_type=refresh_token")
+        expect(String(call.init?.body)).toContain("refresh_token=refresh-old")
+        return Response.json({
+          refresh_token: "refresh-new",
+          access_token: refreshedAccess,
+          expires_in: 120,
+          id_token: token({ chatgpt_account_id: "acct_new" }),
+        })
+      }
+
+      expect(String(call.input)).toBe("https://chatgpt.com/backend-api/codex/responses")
+      return ok()
+    })
+
+    const run = await codex.prompt(
+      { refresh: "refresh-old", access: token({ session_id: "sess_old" }), expires: Date.now() + 5_000, accountId: "acct_old" },
+      {
+        model: "gpt-5.4",
+        msg: [{ role: "user", content: "Hi" }],
+      },
+    )
+
+    expect(calls).toHaveLength(2)
+    expect(run.auth.refresh).toBe("refresh-new")
+    expect(run.auth.access).toBe(refreshedAccess)
+    expect(run.auth.accountId).toBe("acct_new")
+    expect(run.auth.expires).toBeGreaterThan(Date.now())
+
+    const requestHeaders = headers(calls[1]!)
+    expect(requestHeaders.Authorization).toBe(`Bearer ${refreshedAccess}`)
+    expect(requestHeaders["ChatGPT-Account-Id"]).toBe("acct_new")
+    expect(requestHeaders.session_id).toBe("sess_refreshed")
   })
 })
