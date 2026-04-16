@@ -1,8 +1,8 @@
 # tiny-agent-runtime
 
-Minimal Bun-first runtime for AI agent providers and loop orchestration.
+A reusable agent-loop runtime backbone for projects that need reliable provider integration and session management without building on low-level orchestration frameworks.
 
-Supports **GitHub Copilot** and **OpenAI Codex** as provider backends with a shared loop, persistent sessions, and a thin tool/plugin layer.
+Supports **GitHub Copilot** and **OpenAI Codex** as provider backends with a shared loop, persistent sessions, and a thin tool/plugin layer. Auth and provider protocol handling draws on implementation lessons from [opencode](https://github.com/sst/opencode).
 
 ## Requirements
 
