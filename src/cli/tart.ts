@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { createInterface } from "node:readline/promises"
+import { createRequire } from "node:module"
 import type { CodexAuth, CopilotAuth } from "../auth/contracts"
 import { get, set } from "../auth/store"
 import type { Part, ProviderID, Usage } from "../core/contracts"
@@ -11,6 +12,86 @@ import { copilot } from "../providers/copilot/provider"
 import { codex } from "../providers/codex/provider"
 import { main as loginCopilot } from "../providers/copilot/auth"
 import { main as loginCodex } from "../providers/codex/auth"
+
+function getVersion(): string {
+  try {
+    const require = createRequire(import.meta.url)
+    const pkg = require("../../package.json") as { version: string }
+    return pkg.version
+  } catch {
+    return "0.0.0"
+  }
+}
+
+const HELP_GLOBAL = `
+tart — tiny agent runtime CLI
+
+Usage:
+  tart <command> <provider> [options] [args]
+
+Commands:
+  login   Authenticate with a provider
+  prompt  Send a single prompt and print the response
+  chat    Start an interactive chat session
+
+Providers:
+  copilot   GitHub Copilot
+  codex     OpenAI Codex (ChatGPT)
+
+Options:
+  -h, --help      Show this help message
+  -V, --version   Print the version number
+
+Run \`tart <command> --help\` for command-specific options.
+`.trim()
+
+const HELP_LOGIN = `
+Usage:
+  tart login <provider>
+
+Providers:
+  copilot   Authenticate via GitHub OAuth device flow
+  codex     Authenticate via OpenAI / ChatGPT
+
+Options:
+  -h, --help   Show this help message
+`.trim()
+
+const HELP_PROMPT = `
+Usage:
+  tart prompt <provider> [options] [text...]
+
+Send a single prompt to the provider and print the streamed response.
+If no text is provided, input is read from stdin.
+
+Options:
+  --model   MODEL    Override the default model
+  --system  TEXT     Set a system prompt
+  -h, --help         Show this help message
+
+Examples:
+  tart prompt copilot "Explain monads"
+  echo "Summarise this" | tart prompt codex
+  tart prompt codex --model gpt-4o "Hello"
+`.trim()
+
+const HELP_CHAT = `
+Usage:
+  tart chat <provider> [options] [first-turn text...]
+
+Start an interactive multi-turn chat session.
+Type \`exit\` or \`quit\` to end the session.
+
+Options:
+  --model    MODEL    Override the default model
+  --system   TEXT     Set a system prompt
+  --session  ID       Resume an existing session by ID
+  -h, --help          Show this help message
+
+Examples:
+  tart chat copilot
+  tart chat codex --session my-session "Continue from here"
+`.trim()
 
 function usage() {
   console.error("Usage: tart <login|prompt|chat> <copilot|codex> [--model MODEL] [--system TEXT] [--session ID] [args]")
@@ -193,20 +274,55 @@ async function chat(provider: ProviderID, args: string[]) {
 export async function main(argv = process.argv.slice(2)) {
   const [command, provider, ...rest] = argv
 
+  if (command === "--help" || command === "-h" || command === "help") {
+    console.log(HELP_GLOBAL)
+    return 0
+  }
+
+  if (command === "--version" || command === "-V") {
+    console.log(getVersion())
+    return 0
+  }
+
   if (command === "login") {
+    if (provider === "--help" || provider === "-h") {
+      console.log(HELP_LOGIN)
+      return 0
+    }
     if (provider === "copilot") return loginCopilot(rest)
     if (provider === "codex") return loginCodex()
     usage()
     return 1
   }
 
+  if (command === "prompt") {
+    if (provider === "--help" || provider === "-h") {
+      console.log(HELP_PROMPT)
+      return 0
+    }
+    if (provider !== "copilot" && provider !== "codex") {
+      usage()
+      return 1
+    }
+    return prompt(provider, rest)
+  }
+
+  if (command === "chat") {
+    if (provider === "--help" || provider === "-h") {
+      console.log(HELP_CHAT)
+      return 0
+    }
+    if (provider !== "copilot" && provider !== "codex") {
+      usage()
+      return 1
+    }
+    return chat(provider, rest)
+  }
+
   if (provider !== "copilot" && provider !== "codex") {
     usage()
     return 1
   }
-
-  if (command === "prompt") return prompt(provider, rest)
-  if (command === "chat") return chat(provider, rest)
 
   usage()
   return 1

@@ -12,6 +12,7 @@ const stderr = process.stderr.write.bind(process.stderr)
 const readlineAnswers: string[] = []
 const stdoutChunks: string[] = []
 const consoleErrors: string[] = []
+const consoleLogs: string[] = []
 
 type ChatHarness = {
   calls: Array<{ model: string; sessionId?: string; msg: Array<Record<string, unknown>> }>
@@ -75,6 +76,7 @@ async function* parts(...items: Array<{ type: "text"; text: string } | { type: "
 beforeEach(() => {
   stdoutChunks.length = 0
   consoleErrors.length = 0
+  consoleLogs.length = 0
   mock.module("node:readline/promises", () => ({
     createInterface: () => ({
       question: async () => readlineAnswers.shift() ?? "exit",
@@ -95,6 +97,9 @@ beforeEach(() => {
   spyOn(console, "error").mockImplementation((...args: unknown[]) => {
     consoleErrors.push(args.map((arg) => String(arg)).join(" "))
   })
+  spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+    consoleLogs.push(args.map((arg) => String(arg)).join(" "))
+  })
 })
 
 afterEach(async () => {
@@ -103,6 +108,63 @@ afterEach(async () => {
   delete process.env.RUNTIME_AUTH_PATH
   delete process.env.RUNTIME_SESSION_PATH
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
+})
+
+describe("tart --help and --version", () => {
+  test("--help prints global help and exits 0", async () => {
+    const result = await (await cli()).main(["--help"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toContain("tart")
+    expect(out).toContain("login")
+    expect(out).toContain("prompt")
+    expect(out).toContain("chat")
+  })
+
+  test("-h prints global help and exits 0", async () => {
+    const result = await (await cli()).main(["-h"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toContain("tart")
+  })
+
+  test("--version prints version string and exits 0", async () => {
+    const result = await (await cli()).main(["--version"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toMatch(/\d+\.\d+\.\d+/)
+  })
+
+  test("-V prints version string and exits 0", async () => {
+    const result = await (await cli()).main(["-V"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toMatch(/\d+\.\d+\.\d+/)
+  })
+
+  test("login --help prints login help and exits 0", async () => {
+    const result = await (await cli()).main(["login", "--help"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toContain("copilot")
+    expect(out).toContain("codex")
+  })
+
+  test("prompt --help prints prompt help and exits 0", async () => {
+    const result = await (await cli()).main(["prompt", "--help"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toContain("--model")
+    expect(out).toContain("--system")
+  })
+
+  test("chat --help prints chat help and exits 0", async () => {
+    const result = await (await cli()).main(["chat", "--help"])
+    expect(result).toBe(0)
+    const out = consoleLogs.join("")
+    expect(out).toContain("--session")
+    expect(out).toContain("exit")
+  })
 })
 
 describe("tart codex auth persistence", () => {
