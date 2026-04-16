@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { createInterface } from "node:readline/promises"
 import type { CodexAuth, CopilotAuth } from "../auth/contracts"
 import { get, set } from "../auth/store"

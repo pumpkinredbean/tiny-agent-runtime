@@ -61,7 +61,7 @@ describe("copilot provider request shape", () => {
     expect(requestHeaders.Authorization).toBe("Bearer refresh-token")
     expect(requestHeaders["Content-Type"]).toBe("application/json")
     expect(requestHeaders["Openai-Intent"]).toBe("conversation-edits")
-    expect(requestHeaders["User-Agent"]).toContain("@pumpkinredbean/tiny-agent-runtime")
+    expect(requestHeaders["User-Agent"]).toContain("@tiny-agent/tiny-agent-runtime")
     expect(requestHeaders["x-initiator"]).toBe("agent")
 
     expect(body(calls[0]!)).toEqual({

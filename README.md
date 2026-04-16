@@ -11,14 +11,14 @@ Supports **GitHub Copilot** and **OpenAI Codex** as provider backends with a sha
 ## Install
 
 ```sh
-bun add @pumpkinredbean/tiny-agent-runtime
+bun add @tiny-agent/tiny-agent-runtime
 ```
 
 ## Quickstart
 
 ```ts
-import { copilot, loop, createSession, sessionMessages } from "@pumpkinredbean/tiny-agent-runtime"
-import { get } from "@pumpkinredbean/tiny-agent-runtime"
+import { copilot, loop, createSession, sessionMessages } from "@tiny-agent/tiny-agent-runtime"
+import { get } from "@tiny-agent/tiny-agent-runtime"
 
 // Load auth (populated via `bunx tart login copilot`)
 const auth = await get("copilot")
@@ -72,7 +72,7 @@ Auth tokens are stored in `.tmp/auth.json` by default.
 Set `RUNTIME_AUTH_PATH` to override the storage path.
 
 ```ts
-import { get, set, file } from "@pumpkinredbean/tiny-agent-runtime"
+import { get, set, file } from "@tiny-agent/tiny-agent-runtime"
 
 const auth = await get("copilot")   // read
 await set("copilot", auth)           // write
@@ -89,7 +89,7 @@ import {
   createSessionStore,
   appendUserText,
   sessionMessages,
-} from "@pumpkinredbean/tiny-agent-runtime"
+} from "@tiny-agent/tiny-agent-runtime"
 
 const store = createSessionStore()
 const stored = await store.create()
@@ -103,7 +103,7 @@ const session = appendUserText(createSession({ id: stored.id }), "What is 2+2?")
 The runtime ships no built-in tools. Wire app-owned tools via `ToolPlugin` or `LoopTool`:
 
 ```ts
-import { createToolRegistry, loop, type ToolPlugin } from "@pumpkinredbean/tiny-agent-runtime"
+import { createToolRegistry, loop, type ToolPlugin } from "@tiny-agent/tiny-agent-runtime"
 
 const weatherPlugin: ToolPlugin = {
   name: "weather-example",

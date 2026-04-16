@@ -23,7 +23,7 @@ import {
   type ReasoningEffort,
   type SessionTurn,
   type ToolPlugin,
-} from "@pumpkinredbean/tiny-agent-runtime"
+} from "@tiny-agent/tiny-agent-runtime"
 
 const exampleWeatherPlugin: ToolPlugin = {
   name: "browser-sample-weather",

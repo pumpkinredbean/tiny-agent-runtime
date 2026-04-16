@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { mkdtemp, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { createSessionStore, type Part } from "@pumpkinredbean/tiny-agent-runtime"
+import { createSessionStore, type Part } from "@tiny-agent/tiny-agent-runtime"
 import {
   buildModelOptions,
   createSampleApp,

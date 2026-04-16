@@ -15,7 +15,7 @@
     "allowJs": true,
     "isolatedModules": true,
     "paths": {
-      "@pumpkinredbean/tiny-agent-runtime": ["./src/index.ts"]
+      "@tiny-agent/tiny-agent-runtime": ["./src/index.ts"]
     }
   },
   "include": ["src", "examples", "scripts"],

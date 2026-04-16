@@ -1,13 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@pumpkinredbean/tiny-agent-runtime",
+  "name": "@tiny-agent/tiny-agent-runtime",
   "version": "0.0.0",
   "description": "Standalone runtime for agent providers and loop orchestration",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pumpkinredbean/tiny-agent-runtime.git"
+    "url": "git+https://github.com/pumpkinredbean/tiny-agent-runtime.git"
   },
   "homepage": "https://github.com/pumpkinredbean/tiny-agent-runtime#readme",
   "bugs": {
@@ -26,14 +26,14 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "tart": "./bin/tart"
+    "tart": "bin/tart"
   },
   "files": [
     "bin",
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist && bunx tsc -p tsconfig.build.json",
+    "build": "rm -rf dist && bunx tsc -p tsconfig.build.json && chmod +x dist/cli/tart.js",
     "login:codex": "bun run src/cli/tart.ts login codex",
     "login:copilot": "bun run src/cli/tart.ts login copilot",
     "prepack": "bun run build",
