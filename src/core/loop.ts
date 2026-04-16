@@ -124,6 +124,7 @@ export async function loop<Auth>(input: LoopInput<Auth>): Promise<LoopResult<Aut
       const run = await input.adapter.prompt(auth, {
         model: input.model,
         msg,
+        reasoning: input.reasoning,
         max: input.max,
         tools: tools.map((item) => ({
           name: item.name,

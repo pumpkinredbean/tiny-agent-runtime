@@ -1,11 +1,14 @@
 import type { Adapter, Msg } from "../../core/contracts"
+import { normalizeRuntimeReasoning } from "../../core/runtime"
 import { chat, responses } from "../../core/sse"
 import { mapChatTools, mapResponseTools, toChatMessages, toResponseInput } from "../../core/variants"
 import type { CopilotAuth } from "../../auth/contracts"
 
+import { PKG_NAME, PKG_VERSION } from "../../version"
+
 const CLIENT_ID = "Ov23li8tweQw6odWQebz"
 const WAIT = 3000
-const UA = "@pumpkinredbean/tiny-agent-runtime/0.0.0"
+const UA = `${PKG_NAME}/${PKG_VERSION}`
 
 type Device = {
   verification_uri: string
@@ -54,6 +57,10 @@ function use(model: string) {
 function max(model: string, n?: number) {
   if (model.includes("gpt")) return undefined
   return n
+}
+
+function isClaude(model: string) {
+  return model.startsWith("claude-")
 }
 
 export const copilot: Adapter<CopilotAuth> & {
@@ -132,6 +139,8 @@ export const copilot: Adapter<CopilotAuth> & {
   },
   async prompt(auth, req) {
     const kind = use(req.model)
+    const reasoning = normalizeRuntimeReasoning("copilot", req.model, req.reasoning)
+    const maxTokens = max(req.model, req.max)
     const url = `${base(auth.enterpriseUrl)}/${kind === "chat" ? "chat/completions" : "responses"}`
     const res = await fetch(url, {
       method: "POST",
@@ -147,15 +156,16 @@ export const copilot: Adapter<CopilotAuth> & {
               messages: toChatMessages(req.msg),
               tools: mapChatTools(req.tools),
               stream: true,
-              max_tokens: max(req.model, req.max),
+              max_tokens: maxTokens,
             }
           : {
               model: req.model,
               input: toResponseInput(req.msg),
+              reasoning,
               tools: mapResponseTools(req.tools),
               store: false,
               stream: true,
-              max_output_tokens: max(req.model, req.max),
+              max_output_tokens: maxTokens,
             },
       ),
     })

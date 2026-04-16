@@ -1,5 +1,7 @@
 import os from "node:os"
+import { PKG_NAME, PKG_VERSION } from "../../version"
 import type { Adapter } from "../../core/contracts"
+import { normalizeRuntimeReasoning } from "../../core/runtime"
 import { responses } from "../../core/sse"
 import { instructions, mapResponseTools, toCodexResponseInput, withoutSystem } from "../../core/variants"
 import type { CodexAuth } from "../../auth/contracts"
@@ -8,7 +10,7 @@ const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const ISSUER = "https://auth.openai.com"
 const URL = "https://chatgpt.com/backend-api/codex/responses"
 
-const allow = new Set([
+const ALLOW = new Set([
   "gpt-5.1-codex",
   "gpt-5.1-codex-max",
   "gpt-5.1-codex-mini",
@@ -87,11 +89,15 @@ function current(auth: CodexAuth) {
 
 export const codex: Adapter<CodexAuth> & {
   allow(model: string): boolean
+  models(): string[]
   refresh(auth: CodexAuth): Promise<CodexAuth>
 } = {
   id: "codex",
   allow(model) {
-    return allow.has(model) || model.includes("codex")
+    return ALLOW.has(model) || model.includes("codex")
+  },
+  models() {
+    return [...ALLOW]
   },
   refresh,
   async prompt(auth, req) {
@@ -100,11 +106,12 @@ export const codex: Adapter<CodexAuth> & {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${next.access}`,
       "Content-Type": "application/json",
-      "User-Agent": `@pumpkinredbean/tiny-agent-runtime/0.0.0 (${os.platform()} ${os.release()}; ${os.arch()})`,
+      "User-Agent": `${PKG_NAME}/${PKG_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
       originator: "tiny-agent-runtime",
       session_id: req.sessionId ?? session(next.access) ?? crypto.randomUUID(),
     }
     if (next.accountId) headers["ChatGPT-Account-Id"] = next.accountId
+    const reasoning = normalizeRuntimeReasoning("codex", req.model, req.reasoning)
     const res = await fetch(URL, {
       method: "POST",
       signal: req.abort,
@@ -113,6 +120,7 @@ export const codex: Adapter<CodexAuth> & {
         model: req.model,
         instructions: instructions(req.msg),
         input: toCodexResponseInput(withoutSystem(req.msg)),
+        reasoning,
         tools: mapResponseTools(req.tools),
         store: false,
         stream: true,

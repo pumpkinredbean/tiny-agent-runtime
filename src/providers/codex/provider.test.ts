@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { codex } from "../providers/codex/provider"
-import type { Msg } from "../core/contracts"
+import { codex } from "./provider"
+import type { Msg } from "../../core/contracts"
 
 const originalFetch = globalThis.fetch
 
@@ -69,6 +69,7 @@ describe("codex provider request shape", () => {
       {
         model: "gpt-5.4",
         msg,
+        reasoning: { effort: "xhigh" },
         tools: [{ name: "lookup", description: "Look up a record", schema: { type: "object" } }],
       },
     )
@@ -104,6 +105,7 @@ describe("codex provider request shape", () => {
           output: "result",
         },
       ],
+      reasoning: { effort: "xhigh" },
       tools: [
         {
           type: "function",
@@ -149,6 +151,32 @@ describe("codex provider request shape", () => {
         output: "result",
       },
     ])
+  })
+
+  test("drops unsupported reasoning effort for non-gpt-5 codex models", async () => {
+    const calls = capture()
+
+    await codex.prompt(
+      { refresh: "refresh-token", access: token({ session_id: "sess_123" }), expires: Date.now() + 60_000 },
+      {
+        model: "custom-codex-preview",
+        msg: [{ role: "user", content: "Hi" }],
+        reasoning: { effort: "medium" },
+      },
+    )
+
+    expect(body(calls[0]!)).toEqual({
+      model: "custom-codex-preview",
+      instructions: "You are a helpful assistant.",
+      input: [
+        {
+          role: "user",
+          content: [{ type: "input_text", text: "Hi" }],
+        },
+      ],
+      store: false,
+      stream: true,
+    })
   })
 
   test("prefers prompt sessionId over token session claim", async () => {

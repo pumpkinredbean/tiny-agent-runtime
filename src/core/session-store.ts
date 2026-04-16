@@ -1,6 +1,6 @@
 import path from "node:path"
-import { appendFile, mkdir, readFile } from "node:fs/promises"
-import type { Msg, ProviderID } from "./contracts"
+import { appendFile, mkdir, readFile, readdir, rm } from "node:fs/promises"
+import type { Msg, Part, ProviderID } from "./contracts"
 
 export type SessionMeta = {
   id: string
@@ -14,17 +14,25 @@ export type SessionRun = {
   provider: ProviderID
   model: string
   system?: string
+  parts?: Part[]
 }
 
 export type SessionRunInput = {
   provider: ProviderID
   model: string
   system?: string
+  parts?: Part[]
 }
 
 export type StoredSession = SessionMeta & {
   transcript: Msg[]
   runs: SessionRun[]
+}
+
+export type SessionSummary = SessionMeta & {
+  transcriptCount: number
+  lastMessage?: Msg
+  lastRun?: SessionRun
 }
 
 export type SessionStoreInput = {
@@ -95,6 +103,7 @@ function parseRun(input: unknown): SessionRun | undefined {
     provider: input.provider,
     model: input.model,
     system: "system" in input && typeof input.system === "string" ? input.system : undefined,
+    parts: "parts" in input && Array.isArray(input.parts) ? (input.parts as Part[]) : undefined,
   }
 }
 
@@ -193,15 +202,81 @@ export function createSessionStore(input: SessionStoreInput = {}) {
 
   async function appendRun(id: string, run: SessionRunInput) {
     const current = await create(id)
-    await appendJsonl(paths(root, id).runs, { id: createId(), at: now(), ...run })
+    const record: Record<string, unknown> = { id: createId(), at: now(), ...run }
+    if (!run.parts) delete record.parts
+    await appendJsonl(paths(root, id).runs, record)
     await touch(id, current)
+  }
+
+  async function list(): Promise<SessionSummary[]> {
+    try {
+      const entries = await readdir(root, { withFileTypes: true })
+      const sessions = await Promise.all(
+        entries
+          .filter((entry) => entry.isDirectory())
+          .map(async (entry) => {
+            const session = await get(entry.name)
+            if (!session) return undefined
+            return {
+              id: session.id,
+              createdAt: session.createdAt,
+              updatedAt: session.updatedAt,
+              transcriptCount: session.transcript.length,
+              lastMessage: session.transcript.at(-1),
+              lastRun: session.runs.at(-1),
+            } satisfies SessionSummary
+          }),
+      )
+
+      return sessions
+        .flatMap((session) => (session ? [session] : []))
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    } catch {
+      return []
+    }
+  }
+
+  async function remove(id: string): Promise<boolean> {
+    const dir = paths(root, id).dir
+    try {
+      const meta = await readJson(paths(root, id).meta, (value) => parseMeta(value, id))
+      if (!meta) return false
+      await rm(dir, { recursive: true, force: true })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Truncate the transcript for `id` to the first `keepCount` messages.
+   * Returns the truncated session on success, or `undefined` if the session
+   * does not exist.  If `keepCount` >= the current transcript length, the
+   * session is left unchanged and returned as-is.
+   */
+  async function truncateTranscript(id: string, keepCount: number): Promise<StoredSession | undefined> {
+    const session = await get(id)
+    if (!session) return undefined
+    if (keepCount >= session.transcript.length) return session
+
+    const kept = session.transcript.slice(0, keepCount)
+    const file = paths(root, id).transcript
+    await mkdir(path.dirname(file), { recursive: true })
+    const contents = kept.length ? kept.map((msg) => JSON.stringify(msg)).join("\n") + "\n" : ""
+    await Bun.write(file, contents)
+    await touch(id, session)
+    const updated = await get(id)
+    return updated
   }
 
   return {
     root,
     create,
     get,
+    list,
     appendMessage,
     appendRun,
+    remove,
+    truncateTranscript,
   }
 }

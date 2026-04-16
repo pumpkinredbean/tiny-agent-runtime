@@ -33,10 +33,17 @@ export type Tool = {
   schema?: unknown
 }
 
+export type ReasoningEffort = "low" | "medium" | "high" | "xhigh"
+
+export type PromptReasoning = {
+  effort?: ReasoningEffort
+}
+
 export type Prompt = {
   model: string
   msg: Msg[]
   sessionId?: string
+  reasoning?: PromptReasoning
   max?: number
   tools?: Tool[]
   abort?: AbortSignal
@@ -82,6 +89,7 @@ export type LoopInput<Auth> = {
   auth: Auth
   model: string
   msg: Msg[]
+  reasoning?: PromptReasoning
   max?: number
   maxSteps?: number
   toolTimeoutMs?: number

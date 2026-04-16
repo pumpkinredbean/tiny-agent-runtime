@@ -5,80 +5,1497 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>tiny-agent-runtime</title>
     <style>
-      :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-      body { margin: 0; background: #0b1020; color: #e5e7eb; }
-      main { max-width: 900px; margin: 0 auto; padding: 24px; }
-      form, pre { background: #111827; border: 1px solid #374151; border-radius: 12px; }
-      form { padding: 16px; display: grid; gap: 12px; }
-      .row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-      label { display: grid; gap: 6px; font-size: 14px; }
-      input, select, textarea, button { font: inherit; border-radius: 8px; border: 1px solid #4b5563; background: #030712; color: inherit; padding: 10px 12px; }
-      textarea { min-height: 110px; resize: vertical; }
-      button { cursor: pointer; background: #2563eb; border-color: #2563eb; font-weight: 600; }
-      pre { margin-top: 16px; padding: 16px; min-height: 180px; white-space: pre-wrap; }
-      .muted { color: #9ca3af; font-size: 13px; }
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        --control-height: 38px;
+        --bg: #0b1020;
+        --panel: rgba(3, 7, 18, 0.62);
+        --panel-2: rgba(15, 23, 42, 0.92);
+        --panel-3: #030712;
+        --border: rgba(55, 65, 81, 0.72);
+        --border-strong: #374151;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #2563eb;
+        --accent-soft: rgba(37, 99, 235, 0.14);
+        --danger: #f87171;
+        --success: #34d399;
+        --warning: #fbbf24;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: radial-gradient(circle at top, #172554 0, var(--bg) 34%);
+        color: var(--text);
+        overflow: hidden;
+      }
+
+      button, input, select, textarea { font: inherit; }
+      button { cursor: pointer; }
+      h1, h2, h3, p { margin: 0; }
+
+      .app {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        overflow: hidden;
+      }
+
+      .sidebar {
+        min-height: 0;
+        border-right: 1px solid var(--border);
+        background: var(--panel);
+        backdrop-filter: blur(14px);
+        padding: 12px 10px;
+        display: grid;
+        gap: 10px;
+        align-content: start;
+        overflow: auto;
+      }
+
+      .sidebar-header,
+      .sidebar-section {
+        display: grid;
+        gap: 8px;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #93c5fd;
+      }
+
+      .muted { color: var(--muted); }
+
+      .primary-button,
+      .secondary-button,
+      .session-item,
+      .surface-button,
+      .picker-option {
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid var(--border-strong);
+      }
+
+      .primary-button,
+      .secondary-button,
+      .surface-button,
+      .picker-option {
+        background: rgba(15, 23, 42, 0.92);
+        color: var(--text);
+      }
+
+      .primary-button {
+        padding: 9px 12px;
+        background: var(--accent);
+        color: white;
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .secondary-button,
+      .surface-button {
+        padding: 10px 12px;
+      }
+
+      .surface-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--control-height);
+      }
+
+      .system-control {
+        border: 1px solid var(--border-strong);
+        border-radius: 14px;
+        background: var(--panel-2);
+        padding: 10px 12px;
+      }
+
+      .system-control summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        cursor: pointer;
+      }
+
+      .system-control summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .system-summary-title {
+        display: grid;
+        gap: 2px;
+      }
+
+      .system-summary-title strong {
+        font-size: 14px;
+      }
+
+      .system-preview {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .system-chevron,
+      .picker-chevron {
+        color: var(--muted);
+        transition: transform 160ms ease;
+      }
+
+      .system-control[open] .system-chevron {
+        transform: rotate(180deg);
+      }
+
+      .system-body {
+        margin-top: 12px;
+      }
+
+      .session-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        align-items: center;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .session-list {
+        display: grid;
+        gap: 4px;
+      }
+
+      .session-item {
+        padding: 8px 10px;
+        text-align: left;
+        display: grid;
+        gap: 2px;
+        position: relative;
+      }
+
+      .session-item.active {
+        border-color: #60a5fa;
+        background: var(--accent-soft);
+      }
+
+      .session-item strong,
+      .session-item span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .session-item strong {
+        white-space: nowrap;
+        font-size: 13px;
+        font-weight: 600;
+        padding-right: 22px;
+      }
+
+      .session-item .session-snippet {
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .session-item .session-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .session-delete {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        display: inline-grid;
+        place-items: center;
+        font-size: 14px;
+        line-height: 1;
+        opacity: 0;
+        transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+        flex: 0 0 auto;
+        padding: 0;
+      }
+
+      .session-item:hover .session-delete,
+      .session-item:focus-within .session-delete {
+        opacity: 1;
+      }
+
+      .session-delete:hover {
+        background: rgba(248, 113, 113, 0.18);
+        color: var(--danger);
+      }
+
+      .empty-card {
+        border: 1px solid var(--border-strong);
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.86);
+        padding: 16px;
+      }
+
+      .chat-shell {
+        min-height: 0;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+
+      .model-picker {
+        position: relative;
+      }
+
+      .model-picker-trigger {
+        list-style: none;
+        min-width: 180px;
+        max-width: min(360px, calc(100vw - 360px));
+        height: var(--control-height);
+        padding: 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .picker-labels {
+        min-width: 0;
+        display: grid;
+        gap: 1px;
+      }
+
+      .picker-labels strong,
+      .picker-labels span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .picker-labels strong {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .picker-labels span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .picker-popover {
+        position: absolute;
+        top: auto;
+        bottom: calc(100% + 10px);
+        right: 0;
+        width: min(420px, calc(100vw - 360px));
+        max-height: min(520px, calc(100vh - 180px));
+        overflow: auto;
+        padding: 12px;
+        border-radius: 20px;
+        border: 1px solid var(--border-strong);
+        background: rgba(2, 6, 23, 0.98);
+        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
+        z-index: 5;
+      }
+
+      .picker-popover[hidden] {
+        display: none;
+      }
+
+      .model-picker[data-open="true"] .picker-chevron {
+        transform: rotate(180deg);
+      }
+
+      .picker-groups {
+        display: grid;
+        gap: 14px;
+      }
+
+      .picker-group {
+        display: grid;
+        gap: 8px;
+      }
+
+      .picker-group-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .picker-options {
+        display: grid;
+        gap: 8px;
+      }
+
+      .picker-option {
+        padding: 10px 12px;
+        text-align: left;
+        display: grid;
+        gap: 4px;
+      }
+
+      .picker-option.active {
+        border-color: #60a5fa;
+        background: var(--accent-soft);
+      }
+
+      .picker-option small {
+        color: var(--muted);
+      }
+
+      .compact-select {
+        width: auto;
+        min-width: 104px;
+        height: var(--control-height);
+        border-radius: 999px;
+        border: 1px solid var(--border-strong);
+        background: rgba(15, 23, 42, 0.76);
+        color: inherit;
+        padding: 0 28px 0 10px;
+        font-size: 13px;
+        line-height: 1.2;
+      }
+
+      .compact-select[hidden] {
+        display: none;
+      }
+
+      .compact-select[disabled] {
+        opacity: 0.6;
+      }
+
+      .timeline {
+        min-height: 0;
+        overflow: auto;
+        padding: 24px;
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .empty-state {
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+      }
+
+      .empty-card {
+        max-width: 520px;
+        display: grid;
+        gap: 10px;
+        text-align: center;
+      }
+
+      .message {
+        display: grid;
+        gap: 8px;
+      }
+
+      .message.user { justify-items: end; }
+      .message.assistant,
+      .message.tool,
+      .message.system { justify-items: start; }
+
+      .message-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #93c5fd;
+      }
+
+      .bubble {
+        max-width: min(760px, 100%);
+        border-radius: 18px;
+        border: 1px solid var(--border-strong);
+        background: rgba(15, 23, 42, 0.94);
+        padding: 14px 16px;
+        white-space: pre-wrap;
+        line-height: 1.55;
+      }
+
+      .message.user .bubble {
+        background: rgba(37, 99, 235, 0.18);
+        border-color: rgba(96, 165, 250, 0.45);
+      }
+
+      .bubble.pending {
+        border-style: dashed;
+      }
+
+      /* --- user bubble hover actions (Undo / Retry) --- */
+      .message.user .bubble-wrap {
+        position: relative;
+        display: inline-grid;
+        max-width: min(760px, 100%);
+        /* Extend the hover zone downward so the pointer can reach the action
+           buttons, which are absolutely positioned 28px below the bubble. */
+        padding-bottom: 28px;
+      }
+
+      .bubble-actions {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 140ms ease;
+        z-index: 2;
+      }
+
+      .message.user .bubble-wrap:hover .bubble-actions,
+      .message.user .bubble-wrap:focus-within .bubble-actions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .bubble-action-btn {
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-strong);
+        background: rgba(15, 23, 42, 0.96);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+      }
+
+      .bubble-action-btn:hover {
+        background: rgba(37, 99, 235, 0.18);
+        border-color: rgba(96, 165, 250, 0.55);
+        color: #93c5fd;
+      }
+
+      .bubble-action-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .composer-wrap {
+        position: sticky;
+        bottom: 0;
+        padding: 0 24px 24px;
+        background: linear-gradient(to top, rgba(11, 16, 32, 0.96) 72%, rgba(11, 16, 32, 0));
+      }
+
+      .composer {
+        border: 1px solid var(--border-strong);
+        border-radius: 26px;
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));
+        box-shadow: 0 18px 40px rgba(2, 6, 23, 0.35);
+        padding: 16px 16px 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .composer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .composer-actions > * {
+        flex: 0 0 auto;
+      }
+
+      .composer-actions .model-picker {
+        min-width: 0;
+      }
+
+      .composer .surface-button,
+      .composer .compact-select {
+        border-radius: 12px;
+        border-color: rgba(71, 85, 105, 0.75);
+        background: rgba(15, 23, 42, 0.62);
+        color: #cbd5e1;
+        height: var(--control-height);
+      }
+
+      .composer .model-picker-trigger {
+        min-width: 148px;
+        max-width: min(280px, calc(100vw - 460px));
+      }
+
+      .composer .compact-select {
+        width: auto;
+        min-width: 88px;
+        max-width: none;
+      }
+
+      .composer .picker-popover {
+        left: auto;
+        right: 0;
+        width: min(360px, calc(100vw - 80px));
+      }
+
+      textarea {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: inherit;
+        resize: none;
+      }
+
+      #prompt {
+        min-height: 92px;
+        max-height: 240px;
+        overflow-y: auto;
+        padding: 0;
+        font-size: 16px;
+        line-height: 1.6;
+        outline: none;
+      }
+
+      #system {
+        min-height: 110px;
+        padding: 10px 12px;
+        border: 1px solid var(--border-strong);
+        background: var(--panel-3);
+      }
+
+      #prompt::placeholder,
+      #system::placeholder {
+        color: #64748b;
+      }
+
+      .composer-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .composer-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .shortcut-hint,
+      .status-line {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .status-line[data-tone="error"] { color: #fecaca; }
+      .status-line[data-tone="recovery"] { color: #fde68a; }
+      .status-line[data-tone="streaming"] { color: #bfdbfe; }
+
+      .send-button {
+        width: 38px;
+        height: var(--control-height);
+        border: 0;
+        border-radius: 999px;
+        background: var(--accent);
+        color: white;
+        display: inline-grid;
+        place-items: center;
+        flex: 0 0 auto;
+      }
+
+      .send-button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+
+      .send-button svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* ── Inspect panel ─────────────────────────────────────────────── */
+      .inspect-toggle {
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        z-index: 20;
+        height: 28px;
+        padding: 0 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border-strong);
+        background: rgba(15, 23, 42, 0.88);
+        color: var(--muted);
+        font-size: 11px;
+        font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        transition: color 120ms ease, border-color 120ms ease;
+        backdrop-filter: blur(8px);
+      }
+
+      .inspect-toggle:hover {
+        color: #93c5fd;
+        border-color: #60a5fa;
+      }
+
+      .inspect-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        height: 380px;
+        background: rgba(3, 7, 18, 0.97);
+        border-top: 1px solid var(--border-strong);
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        backdrop-filter: blur(12px);
+        transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .inspect-panel[hidden] {
+        display: none;
+      }
+
+      .inspect-header {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border-bottom: 1px solid var(--border);
+        padding: 0 12px;
+        min-height: 38px;
+        flex-shrink: 0;
+      }
+
+      .inspect-title {
+        font-size: 11px;
+        font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-right: 14px;
+        flex: 0 0 auto;
+      }
+
+      .inspect-tabs {
+        display: flex;
+        gap: 2px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      .inspect-tab {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: color 100ms ease, background 100ms ease, border-color 100ms ease;
+        white-space: nowrap;
+      }
+
+      .inspect-tab:hover {
+        color: var(--text);
+        background: rgba(55, 65, 81, 0.3);
+      }
+
+      .inspect-tab.active {
+        color: #93c5fd;
+        background: rgba(37, 99, 235, 0.14);
+        border-color: rgba(96, 165, 250, 0.35);
+      }
+
+      .inspect-close {
+        margin-left: auto;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1;
+        display: inline-grid;
+        place-items: center;
+        cursor: pointer;
+        transition: background 100ms ease, color 100ms ease;
+        flex: 0 0 auto;
+      }
+
+      .inspect-close:hover {
+        background: rgba(248, 113, 113, 0.15);
+        color: var(--danger);
+      }
+
+      .inspect-body {
+        min-height: 0;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .inspect-view {
+        position: absolute;
+        inset: 0;
+        overflow: auto;
+        padding: 12px 16px;
+        font-size: 12px;
+        font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+        line-height: 1.55;
+        white-space: pre;
+        color: #cbd5e1;
+      }
+
+      .inspect-view[hidden] { display: none; }
+
+      .inspect-view-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .inspect-badge {
+        font-size: 10px;
+        font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+        padding: 2px 7px;
+        border-radius: 5px;
+        border: 1px solid var(--border);
+        background: rgba(55, 65, 81, 0.3);
+        color: var(--muted);
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      .inspect-refresh-btn {
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-strong);
+        background: rgba(15, 23, 42, 0.76);
+        color: var(--muted);
+        font-size: 11px;
+        cursor: pointer;
+        font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+        transition: color 100ms ease, border-color 100ms ease;
+      }
+
+      .inspect-refresh-btn:hover {
+        color: #93c5fd;
+        border-color: #60a5fa;
+      }
+
+      .inspect-clear-btn {
+        height: 22px;
+        padding: 0 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border-strong);
+        background: rgba(15, 23, 42, 0.76);
+        color: var(--muted);
+        font-size: 11px;
+        cursor: pointer;
+        font-family: ui-monospace, "Cascadia Code", "Fira Mono", monospace;
+        transition: color 100ms ease, border-color 100ms ease;
+      }
+
+      .inspect-clear-btn:hover {
+        color: var(--danger);
+        border-color: var(--danger);
+      }
+
+      .inspect-empty {
+        color: #475569;
+        font-style: italic;
+      }
+
+      .inspect-event-block {
+        margin-bottom: 8px;
+      }
+
+      .inspect-event-sep {
+        color: #1e293b;
+        user-select: none;
+      }
+
+      /* JSON token colors */
+      .tok-key    { color: #93c5fd; }
+      .tok-str    { color: #6ee7b7; }
+      .tok-num    { color: #fca5a5; }
+      .tok-bool   { color: #fbbf24; }
+      .tok-null   { color: #94a3b8; }
+
+      @media (max-width: 860px) {
+        body { overflow: auto; }
+
+        .app {
+          height: auto;
+          grid-template-columns: 1fr;
+          overflow: visible;
+        }
+
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .chat-shell {
+          min-height: auto;
+        }
+
+        .model-picker,
+        .model-picker-trigger,
+        .picker-popover,
+        .compact-select {
+          width: 100%;
+          max-width: none;
+        }
+
+        .picker-popover {
+          left: 0;
+          right: auto;
+        }
+
+        .composer-footer {
+          align-items: stretch;
+        }
+
+        .composer-actions {
+          width: 100%;
+          justify-content: stretch;
+        }
+
+        .composer-actions > * {
+          flex: 1 1 0;
+        }
+
+        .composer-actions .send-button {
+          flex: 0 0 38px;
+        }
+
+        .inspect-panel {
+          height: 320px;
+        }
+      }
     </style>
   </head>
   <body>
-    <main>
-      <h1>tiny-agent-runtime</h1>
-      <p class="muted">Thin prompt demo over the local runtime auth store with resumable SDK-backed sessions.</p>
-      <form id="prompt-form">
-        <div class="row">
-          <label>
-            Provider
-            <select name="provider">
-              <option value="codex">codex</option>
-              <option value="copilot">copilot</option>
-            </select>
-          </label>
-          <label>
-            Model (optional)
-            <input name="model" placeholder="Use server default" />
-          </label>
+    <div class="app">
+      <aside class="sidebar">
+        <section class="sidebar-header">
+          <span class="eyebrow">tiny-agent-runtime</span>
+          <h1>Chat</h1>
+        </section>
+
+        <button class="primary-button" type="button" id="new-session">+ New chat</button>
+
+        <section class="sidebar-section">
+          <div class="session-meta">
+            <strong>Recent</strong>
+          </div>
+          <div class="session-list" id="session-list"></div>
+        </section>
+      </aside>
+
+      <main class="chat-shell">
+        <section class="timeline" id="timeline"></section>
+
+        <div class="composer-wrap">
+          <form class="composer" id="prompt-form">
+            <input type="hidden" name="provider" id="provider" value="codex" />
+            <input type="hidden" name="model" id="model" />
+
+            <details class="system-control" id="system-control">
+              <summary>
+                <div class="system-summary-title">
+                  <strong>System prompt</strong>
+                  <span class="system-preview" id="system-preview">Default assistant behavior</span>
+                </div>
+                <span class="system-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div class="system-body">
+                <textarea name="system" id="system" placeholder="You are a helpful assistant."></textarea>
+              </div>
+            </details>
+
+            <textarea name="prompt" id="prompt" required placeholder="Message the assistant..."></textarea>
+
+            <div class="composer-footer">
+              <div class="composer-meta">
+                <span class="shortcut-hint">⌘/Ctrl + Enter to send</span>
+                <span class="status-line" id="status-line" data-tone="ready"></span>
+              </div>
+              <div class="composer-actions">
+                <div class="model-picker" id="model-picker">
+                  <button class="surface-button model-picker-trigger" type="button" id="model-picker-trigger" aria-label="Choose provider and model" aria-haspopup="true" aria-expanded="false">
+                    <div class="picker-labels">
+                      <strong id="model-picker-primary">Codex</strong>
+                      <span id="model-picker-secondary">Loading…</span>
+                    </div>
+                    <span class="picker-chevron" aria-hidden="true">⌄</span>
+                  </button>
+                  <div class="picker-popover" id="model-picker-popover" hidden>
+                    <div class="picker-groups" id="model-picker-menu"></div>
+                  </div>
+                </div>
+
+                <select id="composer-effort" class="compact-select" aria-label="Reasoning effort" hidden>
+                </select>
+
+                <button class="send-button" type="submit" id="send-button" aria-label="Send message">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M22 2 11 13"></path>
+                    <path d="m22 2-7 20-4-9-9-4Z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
-        <div class="row">
-          <label>
-            Session ID (optional)
-            <input name="sessionId" placeholder="Auto-created and reused in this browser" />
-          </label>
-          <label>
-            Session controls
-            <button type="button" id="new-session">Start new session</button>
-          </label>
+      </main>
+    </div>
+
+    <!-- ── Inspect toggle button (always visible, bottom-left) ─────── -->
+    <button class="inspect-toggle" type="button" id="inspect-toggle" title="Toggle inspect panel (Ctrl+I)">
+      inspect
+    </button>
+
+    <!-- ── Inspect panel (hidden by default) ──────────────────────── -->
+    <aside class="inspect-panel" id="inspect-panel" hidden aria-label="Inspect panel">
+      <div class="inspect-header">
+        <span class="inspect-title">inspect</span>
+        <div class="inspect-tabs" role="tablist">
+          <button class="inspect-tab active" type="button" id="inspect-tab-events" role="tab" aria-selected="true" aria-controls="inspect-view-events">Events</button>
+          <button class="inspect-tab" type="button" id="inspect-tab-session" role="tab" aria-selected="false" aria-controls="inspect-view-session">Session</button>
         </div>
-        <label>
-          System (optional)
-          <textarea name="system" placeholder="You are a helpful assistant."></textarea>
-        </label>
-        <label>
-          Prompt
-          <textarea name="prompt" required placeholder="Ask something..."></textarea>
-        </label>
-        <button type="submit">Run prompt</button>
-      </form>
-      <pre id="output">Ready.</pre>
-    </main>
+        <button class="inspect-close" type="button" id="inspect-close" aria-label="Close inspect panel">×</button>
+      </div>
+
+      <div class="inspect-body">
+        <!-- Events view -->
+        <div class="inspect-view" id="inspect-view-events" role="tabpanel" aria-labelledby="inspect-tab-events">
+          <div class="inspect-view-header" style="white-space:normal">
+            <span class="inspect-badge" id="inspect-events-count">0 events</span>
+            <button class="inspect-clear-btn" type="button" id="inspect-events-clear">clear</button>
+          </div>
+          <div id="inspect-events-body"><span class="inspect-empty">No events yet — start a run to see raw SSE data.</span></div>
+        </div>
+
+        <!-- Session view -->
+        <div class="inspect-view" id="inspect-view-session" role="tabpanel" aria-labelledby="inspect-tab-session" hidden>
+          <div class="inspect-view-header" style="white-space:normal">
+            <span class="inspect-badge" id="inspect-session-id">no session</span>
+            <button class="inspect-refresh-btn" type="button" id="inspect-session-refresh">↻ refresh</button>
+          </div>
+          <div id="inspect-session-body"><span class="inspect-empty">No active session.</span></div>
+        </div>
+      </div>
+    </aside>
+
     <script type="module">
       const form = document.getElementById("prompt-form");
-      const output = document.getElementById("output");
-      const sessionInput = form.elements.namedItem("sessionId");
-      const newSession = document.getElementById("new-session");
+      const promptInput = document.getElementById("prompt");
+      const providerInput = document.getElementById("provider");
+      const modelInput = document.getElementById("model");
+      const composerEffortInput = document.getElementById("composer-effort");
+      const systemInput = document.getElementById("system");
+      const systemPreview = document.getElementById("system-preview");
+      const timeline = document.getElementById("timeline");
+      const sessionList = document.getElementById("session-list");
+      const newSessionButton = document.getElementById("new-session");
+      const sendButton = document.getElementById("send-button");
+      const statusLine = document.getElementById("status-line");
+      const modelPicker = document.getElementById("model-picker");
+      const modelPickerTrigger = document.getElementById("model-picker-trigger");
+      const modelPickerPopover = document.getElementById("model-picker-popover");
+      const modelPickerPrimary = document.getElementById("model-picker-primary");
+      const modelPickerSecondary = document.getElementById("model-picker-secondary");
+      const modelPickerMenu = document.getElementById("model-picker-menu");
       const storageKey = "tiny-agent-runtime.sessionId";
 
-      if (sessionInput instanceof HTMLInputElement) {
-        sessionInput.value = localStorage.getItem(storageKey) ?? "";
+      // ── Inspect panel elements ──────────────────────────────────────
+      const inspectToggle = document.getElementById("inspect-toggle");
+      const inspectPanel = document.getElementById("inspect-panel");
+      const inspectClose = document.getElementById("inspect-close");
+      const inspectTabEvents = document.getElementById("inspect-tab-events");
+      const inspectTabSession = document.getElementById("inspect-tab-session");
+      const inspectViewEvents = document.getElementById("inspect-view-events");
+      const inspectViewSession = document.getElementById("inspect-view-session");
+      const inspectEventsBody = document.getElementById("inspect-events-body");
+      const inspectEventsCount = document.getElementById("inspect-events-count");
+      const inspectEventsClear = document.getElementById("inspect-events-clear");
+      const inspectSessionBody = document.getElementById("inspect-session-body");
+      const inspectSessionId = document.getElementById("inspect-session-id");
+      const inspectSessionRefresh = document.getElementById("inspect-session-refresh");
+
+      // ── Inspect state ───────────────────────────────────────────────
+      /** @type {{ event: string; data: string; raw: string }[]} */
+      const inspectEvents = [];
+      let inspectActiveTab = /** @type {"events"|"session"} */ ("events");
+      let inspectOpen = false;
+      let inspectSessionFetchController = /** @type {AbortController|null} */ (null);
+
+      /**
+       * catalogState distinguishes three situations so the UI avoids
+       * showing a misleading "No models" card before the first fetch lands:
+       *
+       *  "loading"  – initial fetch (or retry) is in-flight
+       *  "loaded"   – fetch completed; models array may be empty if the
+       *               provider returned none (genuine empty)
+       *  "error"    – all retries exhausted without a successful response
+       */
+      function emptyModelCatalog() {
+        return { provider: "", models: [], selection: null, source: "runtime", catalogState: /** @type {"loading"|"loaded"|"error"} */ ("loading") };
       }
 
-      function append(text) {
-        output.textContent += text;
+      const state = {
+        activeSessionId: localStorage.getItem(storageKey) ?? "",
+        sessions: [],
+        sessionsLoaded: false,
+        transcript: [],
+        streaming: false,
+        pendingAssistantText: "",
+        lastError: "",
+        recentSessionsError: "",
+        modelCatalogs: {
+          codex: emptyModelCatalog(),
+          copilot: emptyModelCatalog(),
+        },
+      };
+
+      function clip(text, limit = 96) {
+        return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
       }
 
-      function setSessionId(value) {
-        if (!(sessionInput instanceof HTMLInputElement)) return;
-        sessionInput.value = value;
+      function messageText(message) {
+        if (!message || typeof message !== "object") return "";
+        if (typeof message.content === "string") return message.content;
+        if (Array.isArray(message.calls)) return message.calls.map((call) => `[tool:${call.name}] ${call.input}`).join("\n");
+        if (message.role === "tool" && typeof message.content === "string") return `[tool:${message.name}] ${message.content}`;
+        return JSON.stringify(message, null, 2);
+      }
+
+      function providerLabel(provider) {
+        return provider === "copilot" ? "Copilot" : "Codex";
+      }
+
+      function errorMessage(error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+
+      function autoResizePrompt() {
+        promptInput.style.height = "auto";
+        promptInput.style.height = `${Math.min(promptInput.scrollHeight, 240)}px`;
+      }
+
+      function getModelCatalog(provider) {
+        return state.modelCatalogs[provider] ?? emptyModelCatalog();
+      }
+
+      function getModelById(provider, modelId) {
+        return getModelCatalog(provider).models.find((model) => model.id === modelId);
+      }
+
+      function selectedModelLabel(provider, modelId) {
+        const catalog = getModelCatalog(provider);
+        if (!modelId) {
+          if (catalog.catalogState === "loading") return "Loading…";
+          return catalog.models.length ? catalog.models[0]?.label ?? "Loading…" : "No models";
+        }
+        return getModelById(provider, modelId)?.label ?? modelId;
+      }
+
+      function preferredDefaultEffort(efforts) {
+        if (!Array.isArray(efforts) || !efforts.length) return "";
+        return efforts.includes("medium") ? "medium" : efforts[0];
+      }
+
+      function resolveSelectedProvider(preferredProvider) {
+        const current = getModelCatalog(preferredProvider);
+        if (current.models.length) return preferredProvider;
+        return ["codex", "copilot"].find((provider) => getModelCatalog(provider).models.length) ?? preferredProvider;
+      }
+
+      function setModelPickerOpen(open) {
+        modelPicker.dataset.open = open ? "true" : "false";
+        modelPickerTrigger.setAttribute("aria-expanded", String(open));
+        modelPickerPopover.hidden = !open;
+      }
+
+      function resolveSelectedModelId(provider, preferredModel = "") {
+        const catalog = getModelCatalog(provider);
+        if (!catalog.models.length) return "";
+        if (preferredModel && getModelById(provider, preferredModel)) return preferredModel;
+        const catalogSelection = typeof catalog.selection?.model === "string" ? catalog.selection.model : "";
+        if (catalogSelection && getModelById(provider, catalogSelection)) return catalogSelection;
+        return catalog.models[0]?.id ?? "";
+      }
+
+      function setStatus(tone, _title, detail = "", recovery = "") {
+        statusLine.dataset.tone = tone;
+        const content = [detail, recovery].filter(Boolean).join(" ").trim();
+        statusLine.textContent = tone === "ready" && !content ? "" : content;
+      }
+
+      function updateSystemPreview() {
+        const value = systemInput.value.trim();
+        systemPreview.textContent = value ? clip(value.replace(/\s+/g, " "), 56) : "Default assistant behavior";
+      }
+
+      function renderModelPickerTrigger() {
+        const provider = providerInput.value;
+        const selectedModel = modelInput.value.trim();
+        modelPickerPrimary.textContent = providerLabel(provider);
+        modelPickerSecondary.textContent = selectedModelLabel(provider, selectedModel);
+      }
+
+      function renderModelPicker() {
+        const providers = ["codex", "copilot"];
+
+        modelPickerMenu.replaceChildren(
+          ...providers.map((provider) => {
+            const catalog = getModelCatalog(provider);
+            const group = document.createElement("section");
+            group.className = "picker-group";
+
+            const header = document.createElement("div");
+            header.className = "picker-group-header";
+            header.innerHTML = `<strong>${providerLabel(provider)}</strong><span>${catalog.models.length || 0} models</span>`;
+
+            const options = document.createElement("div");
+            options.className = "picker-options";
+
+            for (const model of catalog.models) {
+              const option = document.createElement("button");
+              option.type = "button";
+              option.className = `picker-option${providerInput.value === provider && modelInput.value === model.id ? " active" : ""}`;
+              const detail = model.name && model.name !== model.label ? `<small>${model.id}</small>` : "";
+              option.innerHTML = `<strong>${model.label}</strong>${detail}`;
+              option.addEventListener("click", () => {
+                providerInput.value = provider;
+                modelInput.value = model.id;
+                renderEffortOptions(model, composerEffortInput.value);
+                renderModelPicker();
+                setModelPickerOpen(false);
+              });
+              options.append(option);
+            }
+
+            if (!catalog.models.length) {
+              const unavailable = document.createElement("div");
+              unavailable.className = "empty-card";
+              if (catalog.catalogState === "loading") {
+                unavailable.innerHTML = `<strong>${providerLabel(provider)} models loading…</strong><p class="muted">Fetching available models, please wait.</p>`;
+              } else if (catalog.catalogState === "error") {
+                unavailable.innerHTML = `<strong>${providerLabel(provider)} models unavailable.</strong><p class="muted">Could not load models. Try refreshing the sample.</p>`;
+              } else {
+                unavailable.innerHTML = `<strong>${providerLabel(provider)} models unavailable.</strong><p class="muted">Try refreshing the sample or sending with the current provider settings.</p>`;
+              }
+              options.append(unavailable);
+            }
+
+            group.append(header, options);
+            return group;
+          }),
+        );
+
+        renderModelPickerTrigger();
+      }
+
+      function setModelCatalog(provider, payload) {
+        const models = Array.isArray(payload?.models)
+          ? payload.models
+              .filter((model) => model && typeof model === "object" && typeof model.id === "string")
+              .map((model) => ({
+                id: model.id,
+                label: typeof model.label === "string" && model.label ? model.label : model.id,
+                name: typeof model.name === "string" && model.name ? model.name : undefined,
+                reasoningEfforts: Array.isArray(model.reasoningEfforts)
+                  ? model.reasoningEfforts.filter((effort) => typeof effort === "string")
+                  : [],
+              }))
+              .filter((model) => model.id)
+          : [];
+
+        state.modelCatalogs[provider] = {
+          provider,
+          models,
+            selection:
+              payload?.selection && typeof payload.selection === "object"
+                ? {
+                    model: typeof payload.selection.model === "string" ? payload.selection.model : "",
+                    resolvedModel: typeof payload.selection.model === "string" ? payload.selection.model : "",
+                  }
+                : null,
+          source: typeof payload?.source === "string" ? payload.source : "runtime",
+          catalogState: "loaded",
+        };
+
+        syncComposerSelectionsFromModel();
+      }
+
+      async function loadModelOptions(provider, { quiet = false } = {}) {
+        try {
+          const res = await fetch(`/api/models?provider=${encodeURIComponent(provider)}`);
+          if (!res.ok) throw new Error("Unable to load models.");
+          setModelCatalog(provider, await res.json());
+          renderModelPicker();
+        } catch (error) {
+          // Mark catalog as error so the picker shows the right card; caller
+          // decides whether to surface status text.
+          state.modelCatalogs[provider] = {
+            ...state.modelCatalogs[provider],
+            catalogState: "error",
+          };
+          renderModelPicker();
+          if (!quiet && providerInput.value === provider) {
+            setStatus("recovery", "Recovery", `${providerLabel(provider)} model list is unavailable right now.`, "You can still send messages.");
+          }
+          throw error; // re-throw so retry logic can count failures
+        }
+      }
+
+      /**
+       * Load a provider's model catalog with exponential backoff retry.
+       * Attempts: immediately, then after 500 ms, 1.5 s, 4 s (4 total).
+       * The picker stays in "loading…" state until first success or
+       * until all retries are exhausted (then shows error card).
+       */
+      async function loadModelOptionsWithRetry(provider, { quiet = false } = {}) {
+        const delays = [500, 1500, 4000];
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await loadModelOptions(provider, { quiet });
+            return; // success
+          } catch {
+            if (attempt >= delays.length) {
+              // All retries exhausted – catalogState already set to "error" by
+              // loadModelOptions; picker now shows the error card.
+              return;
+            }
+            // Keep catalog in "loading" state during backoff so the picker shows
+            // "loading…" rather than an error card that immediately disappears.
+            state.modelCatalogs[provider] = {
+              ...state.modelCatalogs[provider],
+              catalogState: "loading",
+            };
+            renderModelPicker();
+            await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+          }
+        }
+      }
+
+      /**
+       * Re-sync a provider's catalog if it is stale (empty models and not
+       * currently loading). Used on picker open and on visibility/focus regain.
+       * Runs silently; the picker re-renders when the fetch completes.
+       */
+      function refreshModelCatalogIfStale(provider) {
+        const catalog = getModelCatalog(provider);
+        if (catalog.catalogState === "loading") return; // already in-flight
+        if (catalog.models.length) return;               // catalog is populated
+        // Catalog is empty (or errored) — re-attempt a single quiet fetch.
+        void loadModelOptionsWithRetry(provider, { quiet: true });
+      }
+
+      function renderEffortOptions(model, selectedEffort = "") {
+        const efforts = Array.isArray(model?.reasoningEfforts) ? model.reasoningEfforts : [];
+
+        if (!efforts.length) {
+          composerEffortInput.replaceChildren();
+          composerEffortInput.value = "";
+          composerEffortInput.hidden = true;
+          composerEffortInput.disabled = true;
+          return;
+        }
+
+        composerEffortInput.replaceChildren(
+          ...efforts.map((effort) => {
+            const element = document.createElement("option");
+            element.value = effort;
+            element.textContent = effort.charAt(0).toUpperCase() + effort.slice(1);
+            return element;
+          }),
+        );
+
+        composerEffortInput.hidden = false;
+        composerEffortInput.disabled = false;
+        composerEffortInput.value = efforts.includes(selectedEffort) ? selectedEffort : preferredDefaultEffort(efforts);
+      }
+
+      function syncComposerSelectionsFromModel() {
+        const provider = resolveSelectedProvider(providerInput.value);
+        providerInput.value = provider;
+        modelInput.value = resolveSelectedModelId(provider, modelInput.value.trim());
+        renderEffortOptions(getModelById(provider, modelInput.value.trim()), composerEffortInput.value);
+        renderModelPicker();
+      }
+
+      function setActiveSessionId(value) {
+        state.activeSessionId = value;
+
         if (value) localStorage.setItem(storageKey, value);
         else localStorage.removeItem(storageKey);
+
+        renderSessionList();
+      }
+
+      function renderSessionList() {
+        if (!state.sessionsLoaded) {
+          const loading = document.createElement("div");
+          loading.className = "empty-card";
+          loading.innerHTML = "<span class=\"muted\">Loading sessions…</span>";
+          sessionList.replaceChildren(loading);
+          return;
+        }
+
+        if (state.recentSessionsError && !state.sessions.length) {
+          const errCard = document.createElement("div");
+          errCard.className = "empty-card";
+          errCard.innerHTML = `<strong style="color:var(--danger)">Could not load sessions.</strong><p class="muted" style="font-size:12px;margin-top:4px">${state.recentSessionsError}</p>`;
+          sessionList.replaceChildren(errCard);
+          return;
+        }
+
+        if (!state.sessions.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-card";
+          empty.innerHTML = "<strong>No saved sessions.</strong>";
+          sessionList.replaceChildren(empty);
+          return;
+        }
+
+        sessionList.replaceChildren(
+          ...state.sessions.map((session) => {
+            const item = document.createElement("div");
+            item.className = `session-item${session.id === state.activeSessionId ? " active" : ""}`;
+
+            const label = clip(messageText(session.lastMessage) || session.id, 38);
+            const snippet = clip(messageText(session.lastMessage) || "No messages yet", 52);
+            const when = new Date(session.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+            const selectBtn = document.createElement("button");
+            selectBtn.type = "button";
+            selectBtn.style.cssText = "all:unset;display:contents;cursor:pointer";
+            selectBtn.setAttribute("aria-label", `Open session: ${label}`);
+            selectBtn.innerHTML = `
+              <strong>${label}</strong>
+              <span class="session-snippet">${snippet}</span>
+              <div class="session-footer">
+                <span>${session.transcriptCount} msg${session.transcriptCount === 1 ? "" : "s"}</span>
+                <span>${when}</span>
+              </div>
+            `;
+            selectBtn.addEventListener("click", () => {
+              void activateSession(session.id);
+            });
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.type = "button";
+            deleteBtn.className = "session-delete";
+            deleteBtn.setAttribute("aria-label", `Delete session: ${label}`);
+            deleteBtn.textContent = "×";
+            deleteBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              void deleteSession(session.id);
+            });
+
+            item.append(selectBtn, deleteBtn);
+            return item;
+          }),
+        );
+      }
+
+      function renderTimeline() {
+        const messages = [...state.transcript];
+        if (state.streaming || state.pendingAssistantText) {
+          messages.push({ role: "assistant", content: state.pendingAssistantText, pending: true });
+        }
+
+        if (!messages.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-state";
+          empty.innerHTML = `
+            <div class="empty-card">
+              <h3>Start chatting.</h3>
+            </div>
+          `;
+          timeline.replaceChildren(empty);
+          return;
+        }
+
+        timeline.replaceChildren(
+          ...messages.map((message, idx) => {
+            const article = document.createElement("article");
+            article.className = `message ${message.role}`;
+
+            const label = document.createElement("div");
+            label.className = "message-label";
+            label.textContent = message.pending ? `${message.role} • streaming` : message.role;
+
+            const bubble = document.createElement("div");
+            bubble.className = `bubble${message.pending ? " pending" : ""}`;
+            bubble.textContent = messageText(message) || (message.pending ? "Assistant is thinking…" : "");
+
+            if (message.role === "user" && !message.pending) {
+              const wrap = document.createElement("div");
+              wrap.className = "bubble-wrap";
+              wrap.append(bubble);
+
+              const actions = document.createElement("div");
+              actions.className = "bubble-actions";
+
+              const undoBtn = document.createElement("button");
+              undoBtn.type = "button";
+              undoBtn.className = "bubble-action-btn";
+              undoBtn.textContent = "Undo";
+              undoBtn.title = "Remove this message and everything after it, restore text to input";
+              undoBtn.addEventListener("click", () => void truncateAndRestore(idx, { retry: false }));
+
+              const retryBtn = document.createElement("button");
+              retryBtn.type = "button";
+              retryBtn.className = "bubble-action-btn";
+              retryBtn.textContent = "Retry";
+              retryBtn.title = "Remove this message and everything after it, then re-submit";
+              retryBtn.addEventListener("click", () => void truncateAndRestore(idx, { retry: true }));
+
+              actions.append(undoBtn, retryBtn);
+              wrap.append(actions);
+              article.append(label, wrap);
+            } else {
+              article.append(label, bubble);
+            }
+
+            return article;
+          }),
+        );
+
+        timeline.scrollTop = timeline.scrollHeight;
       }
 
       function parseEvent(block) {
@@ -91,63 +1508,486 @@
         return event;
       }
 
-      newSession.addEventListener("click", () => {
-        setSessionId("");
-        output.textContent = "Ready.";
-      });
+      async function loadSessions() {
+        const res = await fetch("/api/sessions");
+        if (!res.ok) throw new Error("Unable to load recent sessions.");
+        state.sessions = await res.json();
+        state.sessionsLoaded = true;
+        state.recentSessionsError = "";
+        renderSessionList();
+      }
 
-      form.addEventListener("submit", async (node) => {
-        node.preventDefault();
-        output.textContent = "";
+      async function refreshSessionList() {
+        try {
+          await loadSessions();
+          return "";
+        } catch (error) {
+          state.recentSessionsError = errorMessage(error);
+          renderSessionList();
+          return state.recentSessionsError;
+        }
+      }
 
-        const data = new FormData(form);
-        const res = await fetch("/api/prompt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: data.get("provider"),
-            model: data.get("model"),
-            sessionId: data.get("sessionId"),
-            system: data.get("system"),
-            prompt: data.get("prompt"),
-          }),
-        });
+      /**
+       * Load the session list with exponential backoff retry.
+       * Attempts: immediately, then after 500 ms, 1.5 s, 4 s (4 total).
+       * On each failure the sidebar stays in "Loading…" until the first
+       * success or until all retries are exhausted (then shows error card).
+       */
+      async function loadSessionsWithRetry() {
+        const delays = [500, 1500, 4000];
+        for (let attempt = 0; ; attempt++) {
+          try {
+            await loadSessions();
+            return;
+          } catch (error) {
+            if (attempt >= delays.length) {
+              // All retries exhausted — surface the error.
+              state.recentSessionsError = errorMessage(error);
+              // Mark loaded so the sidebar transitions away from "Loading…".
+              state.sessionsLoaded = true;
+              renderSessionList();
+              return;
+            }
+            // Keep sidebar in "Loading…" state while we retry.
+            await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+          }
+        }
+      }
 
-        if (!res.ok || !res.body) {
-          output.textContent = await res.text();
+      async function syncTranscript(sessionId) {
+        if (!sessionId) {
+          state.transcript = [];
+          renderTimeline();
           return;
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        const res = await fetch(`/api/session?sessionId=${encodeURIComponent(sessionId)}`);
+        if (!res.ok) throw new Error(`Unable to load session ${sessionId}.`);
+        const session = await res.json();
+        state.transcript = Array.isArray(session.transcript) ? session.transcript : [];
+        renderTimeline();
+      }
 
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
+      async function activateSession(sessionId) {
+        setActiveSessionId(sessionId);
+        state.pendingAssistantText = "";
+        state.lastError = "";
+        setStatus("ready", "Ready", "", "");
 
-          let split = buffer.indexOf("\n\n");
-          while (split >= 0) {
-            const block = buffer.slice(0, split).trim();
-            buffer = buffer.slice(split + 2);
-            if (block) {
-              const evt = parseEvent(block);
-              if (evt.event === "session") {
-                const payload = JSON.parse(evt.data);
-                if (payload && typeof payload.id === "string") setSessionId(payload.id);
-              } else if (evt.event === "part") {
-                const part = JSON.parse(evt.data);
-                if (part.type === "text" || part.type === "reasoning") append(part.text);
-                else if (part.type === "tool") append(`\n[tool:${part.call.name}] ${part.call.input}\n`);
-                else if (part.type === "error") append(`\n[error] ${part.text}\n`);
-                else if (part.type === "done") {}
-              }
-            }
-            split = buffer.indexOf("\n\n");
+        try {
+          await syncTranscript(sessionId);
+          await refreshSessionList();
+        } catch (error) {
+          setStatus("error", "Error", errorMessage(error), "");
+        }
+      }
+
+      function startNewChat() {
+        setActiveSessionId("");
+        state.transcript = [];
+        state.pendingAssistantText = "";
+        state.lastError = "";
+        renderTimeline();
+        setStatus("ready", "Ready", "", "");
+        autoResizePrompt();
+        promptInput.focus();
+      }
+
+      async function refreshAll(sessionId = state.activeSessionId) {
+        if (sessionId) await syncTranscript(sessionId);
+        const sessionsError = await refreshSessionList();
+        return { sessionsError };
+      }
+
+      async function deleteSession(sessionId) {
+        try {
+          const res = await fetch(`/api/session?sessionId=${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+          if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+          if (state.activeSessionId === sessionId) {
+            startNewChat();
           }
+          await refreshSessionList();
+        } catch (error) {
+          setStatus("error", "Error", errorMessage(error), "");
+        }
+      }
+
+      /**
+       * Truncate the session transcript so that the message at `msgIndex` and
+       * everything after it are removed, restore the user text into the prompt
+       * input, and — when `retry` is true — immediately re-submit the form.
+       *
+       * `msgIndex` is the index into `state.transcript` (the live array shown
+       * in the timeline, which includes only non-pending messages).
+       */
+      async function truncateAndRestore(msgIndex, { retry = false } = {}) {
+        if (state.streaming) return;
+        const message = state.transcript[msgIndex];
+        if (!message || message.role !== "user") return;
+
+        const text = typeof message.content === "string" ? message.content : "";
+        const keepCount = msgIndex; // messages before this index are kept
+
+        try {
+          if (state.activeSessionId) {
+            const res = await fetch("/api/session/truncate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId: state.activeSessionId, keepCount }),
+            });
+            if (!res.ok) throw new Error(`Truncate failed: ${res.status}`);
+            const updated = await res.json();
+            state.transcript = Array.isArray(updated.transcript) ? updated.transcript : [];
+          } else {
+            // No persisted session — just slice the in-memory transcript
+            state.transcript = state.transcript.slice(0, keepCount);
+          }
+
+          promptInput.value = text;
+          autoResizePrompt();
+          promptInput.focus();
+          renderTimeline();
+          await refreshSessionList();
+          setStatus("ready", "Ready", "", "");
+
+          if (retry) {
+            form.requestSubmit();
+          }
+        } catch (error) {
+          setStatus("error", "Error", errorMessage(error), "");
+        }
+      }
+
+      newSessionButton.addEventListener("click", startNewChat);
+      modelPickerTrigger.addEventListener("click", () => {
+        const opening = modelPicker.dataset.open !== "true";
+        setModelPickerOpen(opening);
+        if (opening) {
+          // Re-sync any provider catalog that arrived empty or errored, so a
+          // transient startup miss self-heals the next time the picker opens.
+          refreshModelCatalogIfStale("codex");
+          refreshModelCatalogIfStale("copilot");
         }
       });
+      document.addEventListener("click", (event) => {
+        if (!modelPicker.contains(event.target)) setModelPickerOpen(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") setModelPickerOpen(false);
+      });
+      promptInput.addEventListener("input", autoResizePrompt);
+      promptInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          form.requestSubmit();
+        }
+      });
+      systemInput.addEventListener("input", updateSystemPreview);
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (state.streaming) return;
+
+        const prompt = promptInput.value.trim();
+        if (!prompt) return;
+
+        const previousTranscript = [...state.transcript];
+        state.streaming = true;
+        state.lastError = "";
+        state.pendingAssistantText = "";
+        // Clear inspect events for the new run.
+        inspectEvents.length = 0;
+        if (inspectOpen && inspectActiveTab === "events") renderInspectEvents();
+        state.transcript = [...state.transcript, { role: "user", content: prompt }];
+        renderTimeline();
+        sendButton.disabled = true;
+        promptInput.value = "";
+        autoResizePrompt();
+
+        let activeSessionId = state.activeSessionId;
+        setStatus("streaming", "Streaming", activeSessionId ? "Continuing chat…" : "Starting chat…", "");
+
+        try {
+          const res = await fetch("/api/prompt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              provider: providerInput.value,
+              model: modelInput.value,
+              reasoning:
+                composerEffortInput.hidden || composerEffortInput.disabled || !composerEffortInput.value
+                  ? undefined
+                  : { effort: composerEffortInput.value },
+              system: systemInput.value,
+              sessionId: activeSessionId,
+              prompt,
+              history: activeSessionId
+                ? []
+                : state.transcript
+                    .slice(0, -1)
+                    .filter((message) => (message.role === "user" || message.role === "assistant") && typeof message.content === "string")
+                    .map((message) => ({ role: message.role, content: message.content })),
+            }),
+          });
+
+          if (!res.ok || !res.body) {
+            throw new Error(await res.text());
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            let split = buffer.indexOf("\n\n");
+            while (split >= 0) {
+              const block = buffer.slice(0, split).trim();
+              buffer = buffer.slice(split + 2);
+              if (block) {
+                const evt = parseEvent(block);
+                // Record every raw SSE event for the inspect panel.
+                pushInspectEvent({ event: evt.event, data: evt.data, raw: block });
+                if (evt.event === "session") {
+                  const payload = JSON.parse(evt.data);
+                  if (payload && typeof payload.id === "string") {
+                    activeSessionId = payload.id;
+                    setActiveSessionId(payload.id);
+                  }
+                }
+
+                if (evt.event === "part") {
+                  const part = JSON.parse(evt.data);
+                  if (part.type === "text" || part.type === "reasoning") {
+                    state.pendingAssistantText += part.text;
+                    renderTimeline();
+                  } else if (part.type === "tool") {
+                    state.pendingAssistantText += `${state.pendingAssistantText ? "\n" : ""}[tool:${part.call.name}] ${part.call.input}`;
+                    renderTimeline();
+                  } else if (part.type === "error") {
+                    state.lastError = part.text;
+                    setStatus("recovery", "Recovery", part.text, "");
+                  } else if (part.type === "done") {
+                    setStatus("streaming", "Streaming", "Finishing up…", "");
+                  }
+                }
+              }
+              split = buffer.indexOf("\n\n");
+            }
+          }
+
+          const { sessionsError } = await refreshAll(activeSessionId);
+          setActiveSessionId(activeSessionId);
+          setStatus(
+            state.lastError ? "recovery" : "ready",
+            state.lastError ? "Recovered" : "Ready",
+            state.lastError ? `Run ended after an error: ${state.lastError}` : "",
+            state.lastError ? (sessionsError ? `Sidebar stale: ${sessionsError}.` : "You can keep going.") : "",
+          );
+        } catch (error) {
+          const message = errorMessage(error);
+          state.lastError = message;
+          if (activeSessionId) {
+            try {
+              await refreshAll(activeSessionId);
+              setActiveSessionId(activeSessionId);
+            } catch {}
+          } else {
+            state.transcript = previousTranscript;
+          }
+          setStatus("error", "Error", message, "");
+        } finally {
+          state.streaming = false;
+          state.pendingAssistantText = "";
+          sendButton.disabled = false;
+          renderTimeline();
+        }
+      });
+
+      renderTimeline();
+      renderModelPicker();
+      setActiveSessionId(state.activeSessionId);
+      syncComposerSelectionsFromModel();
+      updateSystemPreview();
+      autoResizePrompt();
+
+      // ── Inspect panel logic ─────────────────────────────────────────
+
+      /**
+       * Lightweight JSON syntax highlighter.
+       * Returns an HTML string with colored spans for keys, strings, numbers,
+       * booleans and nulls.
+       */
+      function highlightJson(json) {
+        return json.replace(
+          /("(?:[^"\\]|\\.)*")\s*:?|(\btrue\b|\bfalse\b)|\bnull\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+          (match, keyOrStr, bool, num) => {
+            if (keyOrStr) {
+              // Check if this is a key (followed by colon, captured in group 1)
+              // or a plain string. The regex includes optional `:?` at end.
+              if (match.endsWith(":")) {
+                return `<span class="tok-key">${keyOrStr}</span>:`;
+              }
+              return `<span class="tok-str">${match}</span>`;
+            }
+            if (bool !== undefined) return `<span class="tok-bool">${match}</span>`;
+            if (match === "null") return `<span class="tok-null">null</span>`;
+            if (num !== undefined) return `<span class="tok-num">${match}</span>`;
+            return match;
+          },
+        );
+      }
+
+      function formatEventBlock(evt, index) {
+        let dataFormatted = evt.data;
+        try {
+          dataFormatted = JSON.stringify(JSON.parse(evt.data), null, 2);
+        } catch {
+          // keep raw
+        }
+        const sep = `<span class="inspect-event-sep">── event #${index + 1} ────────────────────────────────────────────</span>`;
+        const header = `<span class="tok-key">event</span>: <span class="tok-str">"${evt.event}"</span>`;
+        const data = `<span class="tok-key">data</span>:\n${highlightJson(dataFormatted)}`;
+        return `<div class="inspect-event-block">${sep}\n${header}\n${data}</div>`;
+      }
+
+      function renderInspectEvents() {
+        inspectEventsCount.textContent = `${inspectEvents.length} event${inspectEvents.length !== 1 ? "s" : ""}`;
+        if (!inspectEvents.length) {
+          inspectEventsBody.innerHTML = `<span class="inspect-empty">No events yet — start a run to see raw SSE data.</span>`;
+          return;
+        }
+        inspectEventsBody.innerHTML = inspectEvents.map((evt, i) => formatEventBlock(evt, i)).join("");
+        // Auto-scroll to bottom if events tab is active
+        if (inspectActiveTab === "events") {
+          inspectViewEvents.scrollTop = inspectViewEvents.scrollHeight;
+        }
+      }
+
+      function pushInspectEvent(evt) {
+        inspectEvents.push(evt);
+        if (inspectOpen && inspectActiveTab === "events") {
+          renderInspectEvents();
+        } else {
+          // Just update the count badge
+          inspectEventsCount.textContent = `${inspectEvents.length} event${inspectEvents.length !== 1 ? "s" : ""}`;
+        }
+      }
+
+      async function fetchAndRenderInspectSession() {
+        const sessionId = state.activeSessionId;
+        if (!sessionId) {
+          inspectSessionId.textContent = "no session";
+          inspectSessionBody.innerHTML = `<span class="inspect-empty">No active session.</span>`;
+          return;
+        }
+        inspectSessionId.textContent = sessionId.slice(0, 18) + (sessionId.length > 18 ? "…" : "");
+        inspectSessionBody.innerHTML = `<span class="inspect-empty">Fetching…</span>`;
+
+        if (inspectSessionFetchController) inspectSessionFetchController.abort();
+        inspectSessionFetchController = new AbortController();
+        const signal = inspectSessionFetchController.signal;
+
+        try {
+          const res = await fetch(`/api/session?sessionId=${encodeURIComponent(sessionId)}`, { signal });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          const pretty = JSON.stringify(json, null, 2);
+          inspectSessionBody.innerHTML = highlightJson(pretty);
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") return;
+          inspectSessionBody.innerHTML = `<span style="color:var(--danger)">Error: ${error instanceof Error ? error.message : String(error)}</span>`;
+        } finally {
+          inspectSessionFetchController = null;
+        }
+      }
+
+      function setInspectTab(tab) {
+        inspectActiveTab = tab;
+        inspectTabEvents.classList.toggle("active", tab === "events");
+        inspectTabSession.classList.toggle("active", tab === "session");
+        inspectTabEvents.setAttribute("aria-selected", String(tab === "events"));
+        inspectTabSession.setAttribute("aria-selected", String(tab === "session"));
+        inspectViewEvents.hidden = tab !== "events";
+        inspectViewSession.hidden = tab !== "session";
+        if (tab === "events") renderInspectEvents();
+        if (tab === "session") void fetchAndRenderInspectSession();
+      }
+
+      function openInspectPanel() {
+        inspectOpen = true;
+        inspectPanel.hidden = false;
+        setInspectTab(inspectActiveTab);
+      }
+
+      function closeInspectPanel() {
+        inspectOpen = false;
+        inspectPanel.hidden = true;
+      }
+
+      function toggleInspectPanel() {
+        if (inspectOpen) closeInspectPanel();
+        else openInspectPanel();
+      }
+
+      inspectToggle.addEventListener("click", toggleInspectPanel);
+      inspectClose.addEventListener("click", closeInspectPanel);
+      inspectTabEvents.addEventListener("click", () => setInspectTab("events"));
+      inspectTabSession.addEventListener("click", () => setInspectTab("session"));
+      inspectEventsClear.addEventListener("click", () => {
+        inspectEvents.length = 0;
+        renderInspectEvents();
+      });
+      inspectSessionRefresh.addEventListener("click", () => void fetchAndRenderInspectSession());
+
+      document.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "i") {
+          event.preventDefault();
+          toggleInspectPanel();
+        }
+      });
+
+      // Re-sync the session list when the tab regains visibility or window
+      // regains focus, so a transient startup miss recovers automatically.
+      // Guard with a minimum interval so rapid focus toggles don't stack up.
+      let lastVisibilitySync = 0;
+      const VISIBILITY_SYNC_DEBOUNCE_MS = 3000;
+
+      function onPageVisible() {
+        if (!state.sessionsLoaded) return; // still in initial load — don't race it
+        if (state.streaming) return;       // never interrupt an active run
+        const now = Date.now();
+        if (now - lastVisibilitySync < VISIBILITY_SYNC_DEBOUNCE_MS) return;
+        lastVisibilitySync = now;
+        void refreshSessionList();
+        // Also re-sync any model catalog that is empty (transient startup miss).
+        refreshModelCatalogIfStale("codex");
+        refreshModelCatalogIfStale("copilot");
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") onPageVisible();
+      });
+      window.addEventListener("focus", onPageVisible);
+
+      void (async () => {
+        await Promise.all([loadModelOptionsWithRetry("codex", { quiet: true }), loadModelOptionsWithRetry("copilot", { quiet: true })]);
+        await loadSessionsWithRetry();
+        if (state.activeSessionId) {
+          try {
+            await syncTranscript(state.activeSessionId);
+            await refreshSessionList();
+          } catch (error) {
+            setStatus("error", "Error", errorMessage(error), "");
+          }
+        } else if (state.recentSessionsError) {
+          setStatus("recovery", "Recovery", state.recentSessionsError, "");
+        }
+      })();
     </script>
   </body>
 </html>

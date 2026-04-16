@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { copilot } from "../providers/copilot/provider"
-import type { Msg, Tool } from "../core/contracts"
+import { copilot } from "./provider"
+import type { Msg, Tool } from "../../core/contracts"
 
 const originalFetch = globalThis.fetch
 
@@ -38,7 +38,7 @@ afterEach(() => {
 })
 
 describe("copilot provider request shape", () => {
-  test("sends chat/completions request shape", async () => {
+  test("sends claude chat/completions request without reasoning extras", async () => {
     const calls = capture()
     const tools: Tool[] = [{ name: "weather", description: "Look up weather", schema: { type: "object" } }]
     const msg: Msg[] = [
@@ -51,7 +51,7 @@ describe("copilot provider request shape", () => {
 
     await copilot.prompt(
       { refresh: "refresh-token", access: "access-token", expires: Date.now() + 60_000 },
-      { model: "claude-sonnet-4", msg, tools, max: 256 },
+      { model: "claude-sonnet-4", msg, tools, max: 256, reasoning: { effort: "high" } },
     )
 
     expect(calls).toHaveLength(1)
@@ -108,8 +108,9 @@ describe("copilot provider request shape", () => {
     await copilot.prompt(
       { refresh: "refresh-token", access: "access-token", expires: Date.now() + 60_000, enterpriseUrl: "github.example.com" },
       {
-        model: "gpt-5",
+        model: "gpt-5.4",
         msg,
+        reasoning: { effort: "xhigh" },
         tools: [{ name: "ping" }],
         max: 128,
       },
@@ -124,7 +125,7 @@ describe("copilot provider request shape", () => {
     expect(requestHeaders["x-initiator"]).toBe("user")
 
     expect(body(calls[0]!)).toEqual({
-      model: "gpt-5",
+      model: "gpt-5.4",
       input: [
         {
           role: "system",
@@ -135,6 +136,7 @@ describe("copilot provider request shape", () => {
           content: [{ type: "input_text", text: "Say hi" }],
         },
       ],
+      reasoning: { effort: "xhigh" },
       tools: [
         {
           type: "function",
@@ -146,6 +148,27 @@ describe("copilot provider request shape", () => {
       store: false,
       stream: true,
       max_output_tokens: undefined,
+    })
+  })
+
+  test("omits unsupported reasoning for non-reasoning copilot models", async () => {
+    const calls = capture()
+
+    await copilot.prompt(
+      { refresh: "refresh-token", access: "access-token", expires: Date.now() + 60_000 },
+      {
+        model: "gpt-4.1",
+        msg: [{ role: "user", content: "Hi" }],
+        reasoning: { effort: "high" },
+      },
+    )
+
+    expect(body(calls[0]!)).toEqual({
+      model: "gpt-4.1",
+      messages: [{ role: "user", content: "Hi" }],
+      tools: undefined,
+      stream: true,
+      max_tokens: undefined,
     })
   })
 })
