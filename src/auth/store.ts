@@ -49,7 +49,7 @@ function from(input: unknown) {
   } satisfies File
 }
 
-export function file() {
+export function authFile() {
   return process.env.RUNTIME_AUTH_PATH ?? path.join(process.cwd(), ".tmp", "auth.json")
 }
 
@@ -58,7 +58,7 @@ export function parse(text: string) {
 }
 
 async function raw() {
-  const src = Bun.file(file())
+  const src = Bun.file(authFile())
   if (!(await src.exists())) return {}
   const data = await src.json()
   return data && typeof data === "object" ? (data as Record<string, unknown>) : {}
@@ -76,26 +76,26 @@ function normalized(input: Record<string, unknown>) {
 }
 
 async function write(data: Record<string, unknown>) {
-  await mkdir(path.dirname(file()), { recursive: true })
-  await Bun.write(file(), `${JSON.stringify(data, null, 2)}\n`)
+  await mkdir(path.dirname(authFile()), { recursive: true })
+  await Bun.write(authFile(), `${JSON.stringify(data, null, 2)}\n`)
 }
 
-export async function all() {
+export async function allAuth() {
   const data = await raw()
   const next = normalized(data)
   if (JSON.stringify(next) !== JSON.stringify(data)) await write(next)
   return from(next)
 }
 
-export async function get(id: "copilot"): Promise<CopilotAuth | undefined>
-export async function get(id: "codex"): Promise<CodexAuth | undefined>
-export async function get(id: keyof File) {
-  return (await all())[id]
+export async function getAuth(id: "copilot"): Promise<CopilotAuth | undefined>
+export async function getAuth(id: "codex"): Promise<CodexAuth | undefined>
+export async function getAuth(id: keyof File) {
+  return (await allAuth())[id]
 }
 
-export async function set(id: "copilot", auth: CopilotAuth): Promise<void>
-export async function set(id: "codex", auth: CodexAuth): Promise<void>
-export async function set(id: keyof File, auth: CopilotAuth | CodexAuth) {
+export async function setAuth(id: "copilot", auth: CopilotAuth): Promise<void>
+export async function setAuth(id: "codex", auth: CodexAuth): Promise<void>
+export async function setAuth(id: keyof File, auth: CopilotAuth | CodexAuth) {
   const next = normalized({ ...(await raw()), [id]: auth })
   await write(next)
 }

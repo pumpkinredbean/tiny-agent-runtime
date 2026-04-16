@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@tiny-agent/tiny-agent-runtime",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Standalone runtime for agent providers and loop orchestration",
   "type": "module",
   "license": "MIT",

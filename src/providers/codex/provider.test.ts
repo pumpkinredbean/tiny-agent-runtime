@@ -83,7 +83,7 @@ describe("codex provider request shape", () => {
     expect(requestHeaders.originator).toBe("tiny-agent-runtime")
     expect(requestHeaders["ChatGPT-Account-Id"]).toBe("acct_123")
     expect(requestHeaders.session_id).toBe("sess_123")
-    expect(requestHeaders["User-Agent"]).toContain("@tiny-agent/tiny-agent-runtime/0.0.0")
+    expect(requestHeaders["User-Agent"]).toContain("@tiny-agent/tiny-agent-runtime/0.0.1")
 
     expect(body(calls[0]!)).toEqual({
       model: "gpt-5.4",

@@ -18,10 +18,10 @@ bun add @tiny-agent/tiny-agent-runtime
 
 ```ts
 import { copilot, loop, createSession, sessionMessages } from "@tiny-agent/tiny-agent-runtime"
-import { get } from "@tiny-agent/tiny-agent-runtime"
+import { getAuth } from "@tiny-agent/tiny-agent-runtime"
 
 // Load auth (populated via `bunx tart login copilot`)
-const auth = await get("copilot")
+const auth = await getAuth("copilot")
 if (!auth) throw new Error("run: bunx tart login copilot")
 
 const session = createSession()
@@ -72,11 +72,11 @@ Auth tokens are stored in `.tmp/auth.json` by default.
 Set `RUNTIME_AUTH_PATH` to override the storage path.
 
 ```ts
-import { get, set, file } from "@tiny-agent/tiny-agent-runtime"
+import { getAuth, setAuth, authFile } from "@tiny-agent/tiny-agent-runtime"
 
-const auth = await get("copilot")   // read
-await set("copilot", auth)           // write
-console.log(file())                  // default path
+const auth = await getAuth("copilot")   // read
+await setAuth("copilot", auth)           // write
+console.log(authFile())                  // default path
 ```
 
 ## Sessions

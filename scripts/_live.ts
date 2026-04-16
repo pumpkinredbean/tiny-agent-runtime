@@ -1,4 +1,4 @@
-import { get, set } from "../src/auth/store"
+import { getAuth, setAuth } from "../src/auth/store"
 import type { CodexAuth, CopilotAuth } from "../src/auth/contracts"
 import { mergeUsage } from "../src/core/usage"
 import { changedCodexAuth } from "../src/core/runtime"
@@ -16,7 +16,7 @@ export function requireLiveOptIn(name: string) {
 export async function requireProviderAuth(id: "copilot"): Promise<CopilotAuth>
 export async function requireProviderAuth(id: "codex"): Promise<CodexAuth>
 export async function requireProviderAuth(id: ProviderID) {
-  const auth = id === "copilot" ? await get("copilot") : await get("codex")
+  const auth = id === "copilot" ? await getAuth("copilot") : await getAuth("codex")
   if (!auth) fail(`Missing ${id} auth in runtime store. Run: bun run login:${id}`)
   return auth
 }
@@ -25,11 +25,11 @@ export async function persistAuth(id: "copilot", prev: CopilotAuth, next: Copilo
 export async function persistAuth(id: "codex", prev: CodexAuth, next: CodexAuth): Promise<void>
 export async function persistAuth(id: ProviderID, prev: CopilotAuth | CodexAuth, next: CopilotAuth | CodexAuth) {
   if (id === "codex") {
-    if (changedCodexAuth(next as CodexAuth, prev as CodexAuth)) await set("codex", next as CodexAuth)
+    if (changedCodexAuth(next as CodexAuth, prev as CodexAuth)) await setAuth("codex", next as CodexAuth)
     return
   }
 
-  if (JSON.stringify(prev) !== JSON.stringify(next)) await set("copilot", next as CopilotAuth)
+  if (JSON.stringify(prev) !== JSON.stringify(next)) await setAuth("copilot", next as CopilotAuth)
 }
 
 export async function collect(events: AsyncIterable<Part>) {

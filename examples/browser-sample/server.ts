@@ -7,14 +7,14 @@ import {
   createToolRegistry,
   createSession,
   createSessionStore,
-  file as authFile,
-  get,
+  authFile,
+  getAuth,
   normalizeRuntimeReasoning,
   resolveRuntimeModel,
   runtimeReasoningEfforts,
   runtimeDefaultModel,
   sessionMessages,
-  set,
+  setAuth,
   type CodexAuth,
   type CopilotAuth,
   type Part,
@@ -470,14 +470,14 @@ export function createSampleApp(input: Partial<AppDeps> = {}) {
   async function getAuthById(id: "copilot"): Promise<CopilotAuth | undefined>
   async function getAuthById(id: "codex"): Promise<CodexAuth | undefined>
   async function getAuthById(id: ProviderID) {
-    return id === "copilot" ? get("copilot") : get("codex")
+    return id === "copilot" ? getAuth("copilot") : getAuth("codex")
   }
 
   const deps: AppDeps = {
     env: process.env,
     readIndex: () => Bun.file(new URL("./index.html", import.meta.url)).text(),
     getAuth: getAuthById,
-    setCodexAuth: (auth) => set("codex", auth),
+    setCodexAuth: (auth) => setAuth("codex", auth),
     copilotModels: (auth) => copilot.models(auth),
     codexModels: () => codex.models(),
     copilotPrompt: (auth, req) => copilot.prompt(auth, req),

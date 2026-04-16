@@ -1,4 +1,4 @@
-import { file, set } from "../../auth/store"
+import { authFile, setAuth } from "../../auth/store"
 import type { CodexAuth } from "../../auth/contracts"
 import { type CodexTokens, extractAccountId } from "./provider"
 
@@ -100,7 +100,7 @@ const deps: LoginDeps = {
       throw new Error(`codex device poll failed: ${res.status}`)
     }
   },
-  set,
+  set: setAuth,
 }
 
 export function auth(data: CodexTokens): CodexAuth {
@@ -139,7 +139,7 @@ export async function main() {
       return 1
     }
 
-    console.log(`Persisted codex auth to ${file()}`)
+    console.log(`Persisted codex auth to ${authFile()}`)
     return 0
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err))
