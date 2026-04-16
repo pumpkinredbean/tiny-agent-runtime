@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { file, get, parse, set } from "./store"
+import { authFile, getAuth, parse, setAuth } from "./store"
 
 const dirs: string[] = []
 
@@ -54,28 +54,28 @@ describe("runtime auth store", () => {
     dirs.push(dir)
     process.env.RUNTIME_AUTH_PATH = path.join(dir, "auth.json")
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "r1",
       access: "a1",
       expires: 1,
       accountId: "acct_1",
     })
 
-    await set("copilot", {
+    await setAuth("copilot", {
       refresh: "r2",
       access: "a2",
       expires: 2,
       enterpriseUrl: "github.example.com",
     })
 
-    expect(file()).toBe(path.join(dir, "auth.json"))
-    expect(await get("codex")).toEqual({
+    expect(authFile()).toBe(path.join(dir, "auth.json"))
+    expect(await getAuth("codex")).toEqual({
       refresh: "r1",
       access: "a1",
       expires: 1,
       accountId: "acct_1",
     })
-    expect(await get("copilot")).toEqual({
+    expect(await getAuth("copilot")).toEqual({
       refresh: "r2",
       access: "a2",
       expires: 2,
@@ -97,7 +97,7 @@ describe("runtime auth store", () => {
       }),
     )
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "r1",
       access: "a1",
       expires: 1,

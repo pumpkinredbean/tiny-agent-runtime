@@ -1,5 +1,5 @@
 import type { CopilotAuth } from "../../auth/contracts"
-import { file, set } from "../../auth/store"
+import { authFile, setAuth } from "../../auth/store"
 import { copilot } from "./provider"
 
 export type CopilotDeviceCode = Awaited<ReturnType<(typeof copilot)["device"]>>
@@ -18,7 +18,7 @@ export type CopilotLoginOptions = {
 const deps: LoginDeps = {
   device: (url) => copilot.device(url),
   poll: (code, url) => copilot.poll(code, url),
-  set,
+  set: setAuth,
 }
 
 export function normalizeEnterpriseUrl(url?: string) {
@@ -68,7 +68,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       return 1
     }
 
-    console.log(`Persisted copilot auth to ${file()}`)
+    console.log(`Persisted copilot auth to ${authFile()}`)
     return 0
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err))

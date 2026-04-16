@@ -2,7 +2,7 @@
 import { createInterface } from "node:readline/promises"
 import { createRequire } from "node:module"
 import type { CodexAuth, CopilotAuth } from "../auth/contracts"
-import { get, set } from "../auth/store"
+import { getAuth, setAuth } from "../auth/store"
 import type { Part, ProviderID, Usage } from "../core/contracts"
 import { resolveRuntimeModel, changedCodexAuth } from "../core/runtime"
 import { createSessionStore } from "../core/session-store"
@@ -168,12 +168,12 @@ async function auth(id: "copilot"): Promise<CopilotAuth | undefined>
 async function auth(id: "codex"): Promise<CodexAuth | undefined>
 async function auth(id: ProviderID): Promise<CopilotAuth | CodexAuth | undefined>
 async function auth(id: ProviderID) {
-  return id === "copilot" ? get("copilot") : get("codex")
+  return id === "copilot" ? getAuth("copilot") : getAuth("codex")
 }
 
 async function saveAuth(id: ProviderID, prev: CopilotAuth | CodexAuth, next: CopilotAuth | CodexAuth) {
   if (id === "codex" && changedCodexAuth(next as CodexAuth, prev as CodexAuth)) {
-    await set("codex", next as CodexAuth)
+    await setAuth("codex", next as CodexAuth)
   }
 }
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
-import { set } from "../auth/store"
+import { setAuth } from "../auth/store"
 import { codex } from "../providers/codex/provider"
 
 const dirs: string[] = []
@@ -173,7 +173,7 @@ describe("tart codex auth persistence", () => {
     const authPath = path.join(dir, "auth.json")
     process.env.RUNTIME_AUTH_PATH = authPath
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "refresh-old",
       access: "access-old",
       expires: 1,
@@ -210,7 +210,7 @@ describe("tart codex auth persistence", () => {
     process.env.RUNTIME_AUTH_PATH = authPath
     process.env.RUNTIME_SESSION_PATH = path.join(dir, "sessions")
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "refresh-old",
       access: "access-old",
       expires: 1,
@@ -248,7 +248,7 @@ describe("tart codex auth persistence", () => {
     process.env.RUNTIME_AUTH_PATH = path.join(dir, "auth.json")
     process.env.RUNTIME_SESSION_PATH = path.join(dir, "sessions")
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "refresh-old",
       access: "access-old",
       expires: 1,
@@ -302,7 +302,7 @@ describe("tart codex auth persistence", () => {
     const dir = await temp("tiny-agent-runtime-cli-usage-")
     process.env.RUNTIME_AUTH_PATH = path.join(dir, "auth.json")
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "refresh-old",
       access: "access-old",
       expires: Date.now() + 60_000,
@@ -337,7 +337,7 @@ describe("tart codex auth persistence", () => {
     process.env.RUNTIME_AUTH_PATH = path.join(dir, "auth.json")
     process.env.RUNTIME_SESSION_PATH = path.join(dir, "sessions")
 
-    await set("codex", {
+    await setAuth("codex", {
       refresh: "refresh-old",
       access: "access-old",
       expires: Date.now() + 60_000,
